@@ -1,0 +1,126 @@
+from datetime import date
+
+import pytest
+from fastapi import HTTPException
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.database import Base
+from app.main import accessory_rule_record, check_compatibility
+from app.models import AccessoryModel, LaptopModel, SourceEvidence
+from app.schemas import CheckRequest
+
+
+@pytest.fixture
+def client():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    with sessions() as session:
+        laptop = LaptopModel(
+            id="api-laptop",
+            brand="Example",
+            name="Example laptop",
+            usb_c_port_count=1,
+            usb_c_video_supported=True,
+            usb_c_dp_version="1.4",
+            usb_c_pd_input_min_w=45,
+            usb_c_pd_input_max_w=65,
+            maximum_external_displays=2,
+            usb_c_max_resolution="4K",
+            usb_c_max_refresh_hz=60,
+        )
+        accessory = AccessoryModel(
+            id="api-hub",
+            brand="Example",
+            name="Example hub",
+            category="usb_c_hub",
+            host_connection="USB-C",
+            requires_usb_c_dp_alt_mode=True,
+            hdmi_port_count=1,
+            hdmi_max_resolution="4K",
+            hdmi_max_refresh_hz=60,
+            pd_pass_through_max_w=50,
+        )
+        laptop.evidence.append(
+            SourceEvidence(
+                id="laptop-video-source",
+                capability_key="usb_c_video_supported",
+                source_title="Example laptop specifications",
+                source_url="https://example.com/laptop",
+                excerpt="USB-C supports DisplayPort video output.",
+                checked_on=date(2026, 11, 2),
+                review_status="verified",
+            )
+        )
+        accessory.evidence.append(
+            SourceEvidence(
+                id="hub-source",
+                capability_key="pd_pass_through_max_w",
+                source_title="Example hub specifications",
+                source_url="https://example.com/hub",
+                excerpt="Power pass-through up to 50 W.",
+                checked_on=date(2026, 11, 2),
+                review_status="verified",
+            )
+        )
+        session.add_all([laptop, accessory])
+        session.commit()
+
+    try:
+        with sessions() as session:
+            yield session
+    finally:
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+
+def test_check_endpoint_handler_returns_verdict_and_device_evidence(client) -> None:
+    response = check_compatibility(
+        CheckRequest(
+            laptop_id="api-laptop",
+            accessory_id="api-hub",
+            setup={
+                "external_displays": 1,
+                "resolution": "1920x1080",
+                "refresh_rate_hz": 60,
+                "laptop_charging": True,
+            },
+        ),
+        client,
+    )
+
+    assert response.verdict == "compatible_with_limits"
+    assert response.rule_engine_version == "0.2.0"
+    assert {item["status"] for item in response.requirements} == {"passed"}
+    assert len(response.evidence) == 2
+    assert response.limits
+
+
+def test_check_endpoint_preserves_structured_not_found_response(client) -> None:
+    with pytest.raises(HTTPException) as error:
+        check_compatibility(
+            CheckRequest(laptop_id="missing", accessory_id="api-hub"),
+            client,
+        )
+
+    assert error.value.status_code == 404
+    assert error.value.detail["code"] == "laptop_not_found"
+
+
+def test_charger_uses_its_usb_c_output_rating_for_charging() -> None:
+    charger = AccessoryModel(
+        id="charger",
+        brand="Example",
+        name="Example charger",
+        category="usb_c_charger",
+        host_connection="USB-C",
+        usb_c_output_max_w=65,
+    )
+
+    assert accessory_rule_record(charger)["outputs"]["charging_output_watts"] == 65
