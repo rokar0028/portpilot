@@ -1,0 +1,48 @@
+# Free-tier preview configuration. Render's free Postgres expires after 30 days;
+# migrate to durable storage before relying on this deployment or storing user data.
+services:
+  - type: web
+    name: portpilot-api
+    runtime: python
+    region: singapore
+    plan: free
+    rootDir: api
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ready
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.8
+      - key: DATABASE_URL
+        fromDatabase:
+          name: portpilot-db
+          property: connectionString
+      - key: FRONTEND_ORIGIN
+        fromService:
+          type: web
+          name: portpilot-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: ADMIN_API_TOKEN
+        generateValue: true
+
+  - type: web
+    name: portpilot-web
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- --hostname 0.0.0.0
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: portpilot-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  - name: portpilot-db
+    databaseName: portpilot
+    plan: free
+    region: singapore
+    diskSizeGB: 1

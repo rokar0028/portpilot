@@ -6,7 +6,7 @@
 
 > Will this laptop work with this dock, monitor, hub, charger, or portable monitor for my setup?
 
-The first release is an explainable compatibility checker. It uses structured specifications and deterministic rules. AI may make the explanation easier to read, but it must never be the source of the compatibility verdict.
+The first release is an explainable compatibility checker. It uses structured specifications and deterministic rules. The major-project direction adds an AI assistant that translates a user's plain-language setup into structured requirements. AI must never be the source of the compatibility verdict or invent device capabilities; the rule engine checks the interpreted request against documented specifications and reports evidence and uncertainty.
 
 ### Target user
 
@@ -40,6 +40,13 @@ For every supported laptop and accessory pair, PortPilot returns one of these ou
 - Universal support for every laptop or accessory.
 - Hardware diagnosis after a purchase.
 - Automatic product recommendations from live ecommerce data.
+- AI-generated compatibility verdicts or unsupported specification claims.
+
+### Major-project extension: AI-assisted setup input
+
+Let users describe the setup they need in everyday language (for example, “two 4K monitors and laptop charging through one cable”). An AI language model may convert that text into a validated, structured setup request, such as display count, resolution, refresh rate, and charging requirement. The user can review or edit those fields before checking. The existing deterministic rules engine remains responsible for the verdict, and the result continues to cite catalogue evidence.
+
+If the request is ambiguous, the assistant should ask for clarification or leave a field unknown; it must not fill missing hardware facts from model memory. Keep the manual selector flow available. Document the model/provider, prompt and schema, privacy handling, failure behavior, and evaluation results in the project report. Treat this as a scoped extension after the core checker works, so the project remains demonstrable if model access is unavailable.
 
 These boundaries keep the project credible and possible to complete alone.
 
@@ -73,6 +80,10 @@ User selects laptop + accessory + intended setup
                 |
                 v
 Next.js web app -----> FastAPI API -----> PostgreSQL catalogue
+       |                      |
+       | natural-language     | optional AI parsing to validated
+       | setup input          | structured setup request
+       +--------------------->+
                               |
                               v
                     deterministic rule engine
@@ -119,6 +130,14 @@ Implement rules as small, independently tested functions. Each rule returns a re
 6. **USB bandwidth:** warn when a display configuration consumes lanes or bandwidth that constrains storage or peripheral performance.
 7. **Operating-system constraint:** surface documented macOS/Windows limitations rather than silently treating systems as equivalent.
 8. **Evidence completeness:** return `insufficient_data` if any required fact is absent.
+
+### AI-assisted request interpretation
+
+- Accept a plain-language description of the user's desired setup and convert it to the same typed request schema used by the manual selector.
+- Validate model output with the API schema; reject malformed output and let the user edit parsed fields before submission.
+- Ask for clarification or preserve unknown values when intent is ambiguous. Do not infer laptop/accessory capabilities or alter evidence records.
+- Send only the setup description needed for parsing to the configured model provider; document retention/privacy behavior and provide a manual-input fallback when the provider is unavailable.
+- Evaluate parsing on a small, documented set of representative prompts, including ambiguous and unsupported requests. Report field-level accuracy and unsafe/unsupported inference cases; the compatibility verdict is evaluated separately against the deterministic rules.
 
 ## 5. Catalogue acquisition plan
 
@@ -214,11 +233,25 @@ For every record, preserve the source URL, a short quotation or factual excerpt,
 
 **Completion:** a recruiter can understand the project, run it, and see a credible live demonstration.
 
+### Phase 8 — AI-assisted setup interpretation (major-project extension)
+
+- [ ] Define a typed setup-request schema shared by manual input and AI-parsed input.
+- [ ] Add an API endpoint that converts plain-language setup descriptions into schema-validated requirements using a configurable language-model provider.
+- [ ] Show parsed requirements for user review and correction before running a check; preserve the existing manual selector as a fallback.
+- [ ] Handle ambiguous requests with clarification or explicit unknown fields; never ask the model to decide compatibility or supply device specifications.
+- [ ] Add tests for valid parsing, malformed model output, ambiguity, unsupported asks, and unavailable provider behavior.
+- [ ] Create a small evaluation set of natural-language prompts and report field-level parsing accuracy and failure cases in the project report.
+- [ ] Document provider configuration, privacy considerations, limitations, and the separation between AI interpretation and deterministic verdicts.
+
+**Completion:** a user can describe a setup in natural language, review the structured requirements, and receive the same evidence-backed deterministic check as the manual flow. The app remains usable if AI is unavailable.
+
 ## 7. What makes this impressive in interviews
 
 The talking point is not “I built another product finder.” It is:
 
 > I built an explainable compatibility system. Its answers come from an auditable rules engine and cited manufacturer specifications; when the evidence is incomplete, it tells the user instead of guessing.
+
+For the major-project version, add: “An AI assistant translates natural-language needs into reviewable structured requirements, while the verdict remains deterministic and evidence-backed.” This makes the AI contribution clear without presenting generated text as technical proof.
 
 This connects naturally to SSCRE’s conservative decision-making. SSCRE fails closed for unsafe semantic reuse; PortPilot fails closed for incomplete hardware evidence. The projects are related in engineering judgment but solve very different user problems.
 
