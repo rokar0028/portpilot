@@ -31,8 +31,8 @@ services:
     region: singapore
     plan: free
     rootDir: web
-    buildCommand: npm ci && npm run build
-    startCommand: npm start -- --hostname 0.0.0.0
+    buildCommand: npm ci && npm run build && mkdir -p .next/standalone/.next && cp -R .next/static .next/standalone/.next/static && if [ -d public ]; then cp -R public .next/standalone/public; fi
+    startCommand: node .next/standalone/server.js
     envVars:
       - key: NEXT_PUBLIC_API_URL
         fromService:

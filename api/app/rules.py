@@ -142,8 +142,8 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             laptop_resolution = ports.get("usb_c_max_resolution")
             laptop_refresh = ports.get("usb_c_max_refresh_hz")
         elif dp_required is False:
-            laptop_resolution = ports.get("hdmi_max_resolution")
-            laptop_refresh = ports.get("hdmi_max_refresh_hz")
+            laptop_resolution = None
+            laptop_refresh = None
         else:
             laptop_resolution = None
             laptop_refresh = None
@@ -171,6 +171,12 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "exceeds the laptop's documented maximum.",
             )
 
+        if dp_required is False:
+            checks[-1]["detail"] = (
+                "The accessory does not require DisplayPort Alt Mode, but its alternate video path "
+                "from the laptop is not modeled."
+            )
+
         accessory_mode_ok = _mode_at_least(
             outputs.get("hdmi_max_resolution"),
             outputs.get("hdmi_max_refresh_hz"),
@@ -195,6 +201,14 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "failed",
                 f"The requested {setup.resolution} at {setup.refresh_rate_hz} Hz "
                 "exceeds the accessory's documented maximum.",
+            )
+
+        if setup.external_displays > 1:
+            add(
+                "Combined display mode",
+                "unknown",
+                "The catalogue does not establish the maximum mode supported across all requested "
+                "displays at the same time.",
             )
 
     if setup.laptop_charging:

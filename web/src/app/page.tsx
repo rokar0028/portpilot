@@ -77,6 +77,24 @@ export default function Home() {
   const [error, setError] = useState("");
   const [shareMessage, setShareMessage] = useState("");
 
+  function updateLaptopId(value: string) {
+    setLaptopId(value);
+    setResult(null);
+    setError("");
+  }
+
+  function updateAccessoryId(value: string) {
+    setAccessoryId(value);
+    setResult(null);
+    setError("");
+  }
+
+  function updateSetup(nextSetup: Setup) {
+    setSetup(nextSetup);
+    setResult(null);
+    setError("");
+  }
+
   async function runCheck(
     nextLaptopId: string,
     nextAccessoryId: string,
@@ -266,7 +284,7 @@ export default function Home() {
               id="laptop"
               name="laptop_id"
               value={laptopId}
-              onChange={(event) => setLaptopId(event.target.value)}
+              onChange={(event) => updateLaptopId(event.target.value)}
               disabled={!catalog}
             >
               {catalog?.laptops.map((laptop) => (
@@ -312,7 +330,7 @@ export default function Home() {
               id="accessory"
               name="accessory_id"
               value={accessoryId}
-              onChange={(event) => setAccessoryId(event.target.value)}
+              onChange={(event) => updateAccessoryId(event.target.value)}
               disabled={!catalog}
             >
               {catalog?.accessories.map((accessory) => (
@@ -359,7 +377,7 @@ export default function Home() {
                   name="displays"
                   value={setup.external_displays}
                   onChange={(event) =>
-                    setSetup({
+                    updateSetup({
                       ...setup,
                       external_displays: Number(event.target.value),
                     })
@@ -378,7 +396,7 @@ export default function Home() {
                   name="resolution"
                   value={setup.resolution}
                   onChange={(event) =>
-                    setSetup({ ...setup, resolution: event.target.value })
+                    updateSetup({ ...setup, resolution: event.target.value })
                   }
                 >
                   <option value="1920x1080">1080p</option>
@@ -396,7 +414,7 @@ export default function Home() {
                 name="charging"
                 checked={setup.laptop_charging}
                 onChange={(event) =>
-                  setSetup({ ...setup, laptop_charging: event.target.checked })
+                  updateSetup({ ...setup, laptop_charging: event.target.checked })
                 }
               />
               <span className="custom-check">✓</span>
@@ -408,7 +426,7 @@ export default function Home() {
                 name="refresh"
                 value={setup.refresh_rate_hz}
                 onChange={(event) =>
-                  setSetup({
+                  updateSetup({
                     ...setup,
                     refresh_rate_hz: Number(event.target.value),
                   })

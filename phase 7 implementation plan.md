@@ -45,7 +45,8 @@ Prepare PortPilot for a credible public portfolio release: deploy the frontend, 
 - [x] Compare viable free frontend, API, and PostgreSQL hosting options against cost, region, environment variables, persistence, and Docker support.
 - [ ] Confirm the deployment target, public origins, domain, and required secrets before committing provider-specific manifests.
 - [x] Prepare a free Render preview Blueprint with database references, generated admin token, CORS origin wiring, health checks, migrations, and seeding.
-- [ ] Add/confirm a Git remote so Render can read the Blueprint and deploy it.
+- [x] Create the private GitHub repository and push the phase-wise commit history.
+- [ ] Connect the private repository to Render so it can read the Blueprint and deploy it.
 - [ ] Deploy the three components and verify public health, catalogue reads, compatibility checks, and shared result URLs.
 
 ### 4. Release and portfolio handoff
@@ -78,8 +79,9 @@ Phase 7 is complete when the reviewed application is deployed, operational monit
 - [x] Completed and verified the Phase 6 release gate.
 - [x] Compared free hosting options and inspected the selected Render workspace through the connected assistant integration; it contains two unrelated Free web services and no PortPilot services.
 - [x] Prepared the Render free preview Blueprint and documented the 30-day database expiry and spin-down behavior.
-- [ ] Connect or push the PortPilot Git repository to a provider Render can access; the current GitHub CLI credential is invalid and the connected GitHub account lists no repositories.
+- [x] Create the private GitHub repository and push the phase-wise commit history.
+- [ ] Connect the private repository to Render and verify Blueprint deployment eligibility.
 - [ ] Record and review the 90-second demo.
 - [ ] Deploy, verify public behavior, configure provider-side monitoring, and publish verified links to the chosen portfolio destination.
 
-Current status: Phase 7's local implementation is complete and verified. The 75-test API suite, Ruff lint/format, frontend lint/format, and production build pass. The README and demo outline are current, portable health/metrics/logging are implemented, and the Render preview Blueprint parses as YAML. Phase 7 is not complete: Render cannot deploy the Blueprint without an accessible Git remote; no public deployment, provider-side alerts, recorded video, or portfolio publication exists yet. Supabase is installed and accessible; Vercel account tools respond, but the earlier panel screenshot indicated that its plugin setup may still need completion. Existing Vercel and Supabase projects belong to unrelated apps and were left untouched.
+Current status: Phase 7's local implementation is prepared. The README and demo outline are current, portable health/metrics/logging are implemented, and the Render preview Blueprint parses as YAML. The private GitHub repository and phase-wise commit history are available; a Render connection remains unconfirmed. Phase 7 is not complete: no public deployment, provider-side alerts, recorded video, or portfolio publication exists yet. Supabase is installed and accessible; Vercel account tools respond, but the earlier panel screenshot indicated that its plugin setup may still need completion. Existing Vercel and Supabase projects belong to unrelated apps and were left untouched.

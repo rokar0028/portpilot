@@ -90,7 +90,7 @@ def test_exceeding_documented_refresh_rate_is_incompatible() -> None:
         ({"resolution": "1280x720", "refresh_rate_hz": 60}, "compatible"),
         ({"resolution": "4096x2160", "refresh_rate_hz": 60}, "incompatible"),
         ({"resolution": "1920x1200", "refresh_rate_hz": 60}, "compatible"),
-        ({"external_displays": 2}, "compatible"),
+        ({"external_displays": 2}, "insufficient_data"),
         ({"external_displays": 3}, "incompatible"),
         ({"external_displays": 0}, "compatible"),
         ({"laptop_charging": False}, "compatible"),
@@ -130,11 +130,11 @@ def test_missing_and_unsupported_catalogue_facts(mutation, expected: str) -> Non
     assert check(laptop, accessory)["verdict"] == expected
 
 
-def test_explicitly_not_required_usb_c_video_uses_documented_hdmi_path() -> None:
+def test_unmodeled_video_path_does_not_assume_laptop_hdmi() -> None:
     laptop, accessory = records()
     accessory["requirements"]["host_usb_c_video"] = False
     laptop["ports"]["hdmi_max_refresh_hz"] = 60
-    assert check(laptop, accessory)["verdict"] == "compatible"
+    assert check(laptop, accessory)["verdict"] == "insufficient_data"
 
 
 def test_charging_output_equal_to_laptop_minimum_is_limited() -> None:
@@ -189,15 +189,15 @@ def test_display_mode_aliases_and_boundaries(
     [
         (lambda laptop, accessory: laptop["ports"].update(maximum_external_displays=1), "incompatible"),
         (lambda laptop, accessory: accessory["outputs"].update(display_count=1), "incompatible"),
-        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=False), "incompatible"),
-        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=True), "compatible"),
-        (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_min_w=65), "compatible"),
+        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=False), "insufficient_data"),
+        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=True), "insufficient_data"),
+        (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_min_w=65), "insufficient_data"),
         (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_min_w=None), "insufficient_data"),
-        (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_max_w=None), "compatible"),
-        (lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=66), "compatible"),
+        (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_max_w=None), "insufficient_data"),
+        (lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=66), "insufficient_data"),
         (
             lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=45),
-            "compatible_with_limits",
+            "insufficient_data",
         ),
         (lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=44), "incompatible"),
     ],

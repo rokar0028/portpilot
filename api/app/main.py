@@ -75,7 +75,7 @@ async def observe_request(request: Request, call_next):
         else logging.INFO,
         request_id=request_id,
         method=request.method,
-        path=request.url.path,
+        path=route_template,
         route=route_template,
         status_code=status_code,
         elapsed_ms=elapsed_ms,
@@ -100,14 +100,22 @@ def evidence_read(record: SourceEvidence) -> SourceEvidenceRead:
 def laptop_read(record: LaptopModel) -> LaptopRead:
     return LaptopRead(
         **{column.name: getattr(record, column.name) for column in LaptopModel.__table__.columns},
-        evidence=[evidence_read(source) for source in record.evidence],
+        evidence=[
+            evidence_read(source)
+            for source in record.evidence
+            if source.review_status == "verified"
+        ],
     )
 
 
 def accessory_read(record: AccessoryModel) -> AccessoryRead:
     return AccessoryRead(
         **{column.name: getattr(record, column.name) for column in AccessoryModel.__table__.columns},
-        evidence=[evidence_read(source) for source in record.evidence],
+        evidence=[
+            evidence_read(source)
+            for source in record.evidence
+            if source.review_status == "verified"
+        ],
     )
 
 
@@ -243,7 +251,11 @@ def check_compatibility(
         )
 
     result = evaluate(request, laptop_rule_record(laptop), accessory_rule_record(accessory))
-    result["evidence"] = [evidence_read(item) for item in [*laptop.evidence, *accessory.evidence]]
+    result["evidence"] = [
+        evidence_read(item)
+        for item in [*laptop.evidence, *accessory.evidence]
+        if item.review_status == "verified"
+    ]
     metrics.record_check(result["verdict"], result["rule_engine_version"])
     check_log_fields = {
         "verdict": result["verdict"],
