@@ -95,6 +95,42 @@ npm run format:check
 npm run build
 ```
 
+## End-to-end tests
+
+Browser tests use a disposable PostgreSQL database named `portpilot_e2e`, synthetic fixture records, and the production standalone frontend. They refuse to seed unless `PORTPILOT_E2E=1` and the database URL points to the local test database. They do not use Render or any shared deployment.
+
+Start the isolated database from the repository root:
+
+```powershell
+docker compose -p portpilot-e2e -f docker-compose.e2e.yml up -d --wait
+```
+
+In an API terminal, set the test environment and prepare the database:
+
+```powershell
+cd api
+$env:PORTPILOT_E2E = "1"
+$dbPort = (docker compose -p portpilot-e2e -f ../docker-compose.e2e.yml port e2e-db 5432).Split(":")[-1]
+$env:DATABASE_URL = "postgresql+psycopg://portpilot_e2e:portpilot_e2e@127.0.0.1:$dbPort/portpilot_e2e"
+$env:FRONTEND_ORIGIN = "http://127.0.0.1:13000"
+$env:ADMIN_API_TOKEN = "local-e2e-only-token"
+alembic upgrade head
+python -m app.seed
+python -m e2e_fixtures
+```
+
+In a second terminal, use the same `NEXT_PUBLIC_API_URL` and run the built browser suite:
+
+```powershell
+cd web
+$env:NEXT_PUBLIC_API_URL = "http://127.0.0.1:18000"
+npm run build:standalone
+npm run e2e:install
+npm run e2e
+```
+
+The Playwright config starts the API and standalone frontend against that database. When finished, stop the disposable database from the repository root with `docker compose -p portpilot-e2e -f docker-compose.e2e.yml down`.
+
 CI runs these checks on pushes and pull requests. Apply database migrations with `alembic upgrade head`, and seed the curated devices with `python -m app.seed`. Format code with `ruff format app migrations` and `npm run format`.
 
 ## Architecture and design choices
