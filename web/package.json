@@ -9,9 +9,9 @@
     "start": "next start",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
-    "lint": "eslint src",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
+    "lint": "eslint src e2e playwright.config.ts \"scripts/*.mjs\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" playwright.config.ts \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" playwright.config.ts \"scripts/*.mjs\""
   },
   "dependencies": {
     "next": "^15.2.0",

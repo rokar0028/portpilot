@@ -100,22 +100,14 @@ def evidence_read(record: SourceEvidence) -> SourceEvidenceRead:
 def laptop_read(record: LaptopModel) -> LaptopRead:
     return LaptopRead(
         **{column.name: getattr(record, column.name) for column in LaptopModel.__table__.columns},
-        evidence=[
-            evidence_read(source)
-            for source in record.evidence
-            if source.review_status == "verified"
-        ],
+        evidence=[evidence_read(source) for source in record.evidence if source.review_status == "verified"],
     )
 
 
 def accessory_read(record: AccessoryModel) -> AccessoryRead:
     return AccessoryRead(
         **{column.name: getattr(record, column.name) for column in AccessoryModel.__table__.columns},
-        evidence=[
-            evidence_read(source)
-            for source in record.evidence
-            if source.review_status == "verified"
-        ],
+        evidence=[evidence_read(source) for source in record.evidence if source.review_status == "verified"],
     )
 
 

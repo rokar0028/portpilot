@@ -117,6 +117,8 @@ $env:ADMIN_API_TOKEN = "local-e2e-only-token"
 alembic upgrade head
 python -m app.seed
 python -m e2e_fixtures
+$env:PORTPILOT_POSTGRES_TESTS = "1"
+python -m pytest tests/test_postgres_api.py -q
 ```
 
 In a second terminal, use the same `NEXT_PUBLIC_API_URL` and run the built browser suite:

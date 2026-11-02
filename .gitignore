@@ -18,6 +18,8 @@ node_modules/
 web/node_modules/
 web/.next/
 web/out/
+web/test-results/
+web/playwright-report/
 web/next-env.d.ts
 .DS_Store
 

@@ -189,12 +189,21 @@ def test_display_mode_aliases_and_boundaries(
     [
         (lambda laptop, accessory: laptop["ports"].update(maximum_external_displays=1), "incompatible"),
         (lambda laptop, accessory: accessory["outputs"].update(display_count=1), "incompatible"),
-        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=False), "insufficient_data"),
-        (lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=True), "insufficient_data"),
+        (
+            lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=False),
+            "insufficient_data",
+        ),
+        (
+            lambda laptop, accessory: accessory["requirements"].update(host_usb_c_video=True),
+            "insufficient_data",
+        ),
         (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_min_w=65), "insufficient_data"),
         (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_min_w=None), "insufficient_data"),
         (lambda laptop, accessory: laptop["ports"].update(usb_c_pd_input_max_w=None), "insufficient_data"),
-        (lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=66), "insufficient_data"),
+        (
+            lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=66),
+            "insufficient_data",
+        ),
         (
             lambda laptop, accessory: accessory["outputs"].update(charging_output_watts=45),
             "insufficient_data",

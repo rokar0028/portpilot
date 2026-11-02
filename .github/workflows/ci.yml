@@ -36,3 +36,80 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run build
+
+  end-to-end:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: portpilot_e2e
+          POSTGRES_USER: portpilot_e2e
+          POSTGRES_PASSWORD: portpilot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portpilot_e2e -d portpilot_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PORTPILOT_E2E: "1"
+      PORTPILOT_POSTGRES_TESTS: "1"
+      DATABASE_URL: postgresql+psycopg://portpilot_e2e:portpilot_e2e@127.0.0.1:5432/portpilot_e2e
+      FRONTEND_ORIGIN: http://127.0.0.1:13000
+      ADMIN_API_TOKEN: portpilot-local-e2e-token
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:18000
+      PORTPILOT_E2E_API_URL: http://127.0.0.1:18000
+      PORTPILOT_E2E_WEB_URL: http://127.0.0.1:13000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install backend dependencies
+        working-directory: api
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Apply migrations
+        working-directory: api
+        run: python -m alembic upgrade head
+      - name: Seed curated catalogue twice
+        working-directory: api
+        run: |
+          python -m app.seed
+          python -m app.seed
+      - name: Add synthetic browser fixtures
+        working-directory: api
+        run: python -m e2e_fixtures
+      - name: Verify PostgreSQL API behavior
+        working-directory: api
+        run: python -m pytest tests/test_postgres_api.py -q
+      - name: Build standalone frontend
+        working-directory: web
+        run: npm run build:standalone
+      - name: Run Chromium P0 journeys
+        working-directory: web
+        run: npm run e2e
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portpilot-e2e-diagnostics
+          path: |
+            web/playwright-report/
+            web/test-results/
+          retention-days: 5
+          if-no-files-found: ignore
