@@ -135,6 +135,8 @@ The Playwright config starts the API and standalone frontend against that databa
 
 CI runs these checks on pushes and pull requests. Apply database migrations with `alembic upgrade head`, and seed the curated devices with `python -m app.seed`. Format code with `ruff format app migrations` and `npm run format`.
 
+The scheduled **Release confidence** workflow runs the same browser journeys in Chromium, Firefox, and WebKit, repeats PostgreSQL policy/API checks, and records a low-rate k6 baseline plus database readiness recovery against job-local disposable databases. Run it manually with a candidate commit SHA before a release. It does not target Render or any shared deployment; deployment smoke requires a separately provisioned isolated preview.
+
 ## Architecture and design choices
 
 ```mermaid

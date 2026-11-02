@@ -1,0 +1,197 @@
+name: Release confidence
+
+on:
+  schedule:
+    - cron: "23 2 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Optional commit SHA to validate as a release candidate
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-confidence-${{ inputs.candidate_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  cross-browser:
+    name: ${{ matrix.browser }} P0, accessibility, and API coverage
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: portpilot_e2e
+          POSTGRES_USER: portpilot_e2e
+          POSTGRES_PASSWORD: portpilot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portpilot_e2e -d portpilot_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CI: "1"
+      PORTPILOT_E2E: "1"
+      PORTPILOT_POSTGRES_TESTS: "1"
+      PORTPILOT_E2E_CROSS_BROWSER: "1"
+      PORTPILOT_E2E_BROWSER: ${{ matrix.browser }}
+      DATABASE_URL: postgresql+psycopg://portpilot_e2e:portpilot_e2e@127.0.0.1:5432/portpilot_e2e
+      FRONTEND_ORIGIN: http://127.0.0.1:13000
+      ADMIN_API_TOKEN: portpilot-local-e2e-token
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:18000
+      PORTPILOT_E2E_API_URL: http://127.0.0.1:18000
+      PORTPILOT_E2E_WEB_URL: http://127.0.0.1:13000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+      - name: Record candidate
+        run: |
+          echo "Validated commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Started at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install backend dependencies
+        working-directory: api
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+      - name: Install browser engines
+        working-directory: web
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Apply migrations
+        working-directory: api
+        run: python -m alembic upgrade head
+      - name: Seed curated catalogue twice
+        working-directory: api
+        run: |
+          python -m app.seed
+          python -m app.seed
+      - name: Add synthetic browser fixtures
+        working-directory: api
+        run: python -m e2e_fixtures
+      - name: Verify PostgreSQL API lifecycle and policy
+        working-directory: api
+        run: python -m pytest tests/test_postgres_api.py -q
+      - name: Build standalone frontend
+        working-directory: web
+        run: npm run build:e2e
+      - name: Run P0 journeys and accessibility checks
+        working-directory: web
+        run: npm run e2e
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.browser }}-diagnostics-${{ github.run_id }}
+          path: |
+            web/playwright-report/
+            web/test-results/
+          retention-days: 5
+          if-no-files-found: ignore
+
+  performance-and-resilience:
+    name: Isolated low-rate baseline and database outage recovery
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: portpilot_e2e
+          POSTGRES_USER: portpilot_e2e
+          POSTGRES_PASSWORD: portpilot_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portpilot_e2e -d portpilot_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PORTPILOT_E2E: "1"
+      DATABASE_URL: postgresql+psycopg://portpilot_e2e:portpilot_e2e@127.0.0.1:5432/portpilot_e2e
+      ADMIN_API_TOKEN: portpilot-local-e2e-token
+      PORTPILOT_API_URL: http://127.0.0.1:18000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+      - name: Record candidate
+        run: |
+          echo "Validated commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Started at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend dependencies
+        working-directory: api
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+      - name: Apply migrations and seed disposable database
+        working-directory: api
+        run: |
+          python -m alembic upgrade head
+          python -m app.seed
+          python -m e2e_fixtures
+      - name: Start local API
+        working-directory: api
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 18000 > /tmp/portpilot-api.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent "$PORTPILOT_API_URL/ready"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/portpilot-api.log
+          exit 1
+      - name: Run low-rate isolated baseline
+        working-directory: api
+        run: k6 run --summary-export=../k6-summary.json perf/e2e-baseline.js
+      - name: Verify readiness during database outage and recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          postgres_id="$(docker ps --filter ancestor=postgres:16-alpine --format '{{.ID}}' | head -n 1)"
+          test -n "$postgres_id"
+          trap 'docker start "$postgres_id" >/dev/null || true' EXIT
+          docker stop "$postgres_id" >/dev/null
+          status="$(curl --silent --output /tmp/readiness.json --write-out '%{http_code}' "$PORTPILOT_API_URL/ready" || true)"
+          test "$status" = "503"
+          grep -q 'not_ready' /tmp/readiness.json
+          docker start "$postgres_id" >/dev/null
+          for attempt in {1..60}; do
+            if curl --fail --silent "$PORTPILOT_API_URL/ready"; then
+              echo "Database readiness recovered after restart." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/portpilot-api.log
+          exit 1
+      - name: Upload baseline metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-performance-${{ github.run_id }}
+          path: k6-summary.json
+          retention-days: 5
+          if-no-files-found: ignore
