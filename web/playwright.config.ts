@@ -35,7 +35,7 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "node .next/standalone/server.js",
+      command: "node .next-e2e/standalone/server.js",
       url: webUrl,
       reuseExistingServer: false,
       timeout: 60_000,

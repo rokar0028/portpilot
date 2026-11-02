@@ -126,7 +126,7 @@ In a second terminal, use the same `NEXT_PUBLIC_API_URL` and run the built brows
 ```powershell
 cd web
 $env:NEXT_PUBLIC_API_URL = "http://127.0.0.1:18000"
-npm run build:standalone
+npm run build:e2e
 npm run e2e:install
 npm run e2e
 ```

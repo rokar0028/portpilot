@@ -15,20 +15,20 @@ test("loads the verified catalogue in the production standalone frontend", async
 
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /will your gear/i }),
+    page.getByRole("heading", { name: /will your (gear|devices)/i }),
   ).toBeVisible();
   await expect(page.getByLabel("Laptop", { exact: true })).toContainText(
     "E2E Supported Laptop",
   );
-  await expect(page.getByLabel("Accessory", { exact: true })).toContainText(
-    "E2E Supported Hub",
-  );
+  await expect(
+    page.getByRole("combobox", { name: /^Accessory/ }),
+  ).toContainText("E2E Supported Hub");
   await expect(page.getByLabel("Laptop", { exact: true })).not.toContainText(
     "E2E Unreviewed Laptop",
   );
-  await expect(page.getByLabel("Accessory", { exact: true })).not.toContainText(
-    "E2E Unreviewed Hub",
-  );
+  await expect(
+    page.getByRole("combobox", { name: /^Accessory/ }),
+  ).not.toContainText("E2E Unreviewed Hub");
   expect(pageErrors).toEqual([]);
   expect(failedApiRequests).toEqual([]);
 });

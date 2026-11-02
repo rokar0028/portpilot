@@ -8,8 +8,9 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 
-from app.database import SessionLocal
+from app.database import SessionLocal, get_session
 from app.main import app
 from app.models import AccessoryModel, LaptopModel, SourceEvidence
 
@@ -99,6 +100,31 @@ def test_health_readiness_and_verified_catalogue_are_available(client: TestClien
         for device in [*catalogue["laptops"], *catalogue["accessories"]]
         for source in device["evidence"]
     )
+
+
+def test_readiness_reports_database_outage_and_recovers(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class UnavailableSession:
+        def execute(self, _statement):
+            raise OperationalError("SELECT 1", {}, ConnectionError("synthetic outage"))
+
+        def close(self) -> None:
+            pass
+
+    def unavailable_session():
+        yield UnavailableSession()
+
+    monkeypatch.setitem(app.dependency_overrides, get_session, unavailable_session)
+    assert client.get("/health").status_code == 200
+    outage = client.get("/ready")
+    assert outage.status_code == 503
+    assert outage.json() == {"status": "not_ready"}
+
+    monkeypatch.delitem(app.dependency_overrides, get_session)
+    recovered = client.get("/ready")
+    assert recovered.status_code == 200
+    assert recovered.json() == {"status": "ready"}
 
 
 def test_check_http_response_hides_unverified_evidence(client: TestClient) -> None:

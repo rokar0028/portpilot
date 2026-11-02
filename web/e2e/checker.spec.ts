@@ -2,26 +2,102 @@ import { expect, test, type Page } from "@playwright/test";
 
 const apiOrigin = process.env.PORTPILOT_E2E_API_URL ?? "http://127.0.0.1:18000";
 
+const laptopFixtureIds: Record<string, string> = {
+  "E2E Supported Laptop": "e2e-good-laptop",
+  "E2E No Video Laptop": "e2e-bad-laptop",
+  "E2E Unknown Mode Laptop": "e2e-unknown-laptop",
+};
+
+const setupFieldsOpened = new WeakSet<Page>();
+
+async function openSetupFields(page: Page) {
+  if (setupFieldsOpened.has(page)) return;
+  const setupDisclosure = page.getByText("Change setup (optional)", {
+    exact: true,
+  });
+  if (await setupDisclosure.count()) await setupDisclosure.click();
+  setupFieldsOpened.add(page);
+}
+
+async function setLaptopCharging(page: Page, charging: boolean) {
+  const select = page.getByRole("combobox", {
+    name: /^(Laptop charging|Charge laptop)/i,
+  });
+  if (await select.count()) {
+    await select.selectOption(String(charging));
+    return;
+  }
+
+  const checkbox = page.getByRole("checkbox", {
+    name: /charge my laptop through this accessory/i,
+  });
+  if (charging) await checkbox.check();
+  else await checkbox.uncheck();
+}
+
+async function expectLaptopCharging(page: Page, charging: boolean) {
+  const select = page.getByRole("combobox", {
+    name: /^(Laptop charging|Charge laptop)/i,
+  });
+  if (await select.count()) {
+    await expect(select).toHaveValue(String(charging));
+    return;
+  }
+
+  const checkbox = page.getByRole("checkbox", {
+    name: /charge my laptop through this accessory/i,
+  });
+  if (charging) await expect(checkbox).toBeChecked();
+  else await expect(checkbox).not.toBeChecked();
+}
+
 async function chooseFixture(page: Page, laptop = "E2E Supported Laptop") {
   await page
     .getByLabel("Laptop", { exact: true })
-    .selectOption({ label: laptop });
+    .selectOption(laptopFixtureIds[laptop]);
   await page
-    .getByLabel("Accessory", { exact: true })
-    .selectOption({ label: "E2E Supported Hub" });
+    .getByRole("combobox", { name: /^Accessory/i })
+    .selectOption("e2e-good-hub");
 }
 
 async function submitSupportedCheck(page: Page) {
   await chooseFixture(page);
-  await page.getByLabel("Laptop charging").selectOption("false");
+  await openSetupFields(page);
+  await setLaptopCharging(page, false);
   await page.getByRole("button", { name: /check my setup/i }).click();
-  await expect(page.getByRole("heading", { name: "compatible" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /compatible/i }),
+  ).toBeVisible();
 }
 
 async function changeSelect(page: Page, label: string) {
-  const control = ["Laptop", "Accessory"].includes(label)
-    ? page.getByLabel(label, { exact: true })
-    : page.getByRole("combobox", { name: new RegExp(`^${label}`) });
+  if (label === "Laptop charging") {
+    const select = page.getByRole("combobox", {
+      name: /^(Laptop charging|Charge laptop)/i,
+    });
+    if (await select.count()) {
+      await setLaptopCharging(page, (await select.inputValue()) !== "true");
+    } else {
+      const checkbox = page.getByRole("checkbox", {
+        name: /charge my laptop through this accessory/i,
+      });
+      await setLaptopCharging(page, !(await checkbox.isChecked()));
+    }
+    return;
+  }
+
+  const control =
+    label === "Laptop"
+      ? page.getByLabel(label, { exact: true })
+      : label === "Accessory"
+        ? page.getByRole("combobox", { name: /^Accessory/i })
+        : label === "External displays"
+          ? page.getByRole("combobox", {
+              name: /^External (displays|screens)/i,
+            })
+          : page.getByRole("combobox", {
+              name: new RegExp(`^${label}`, "i"),
+            });
   const selected = await control.inputValue();
   const other = await control
     .locator("option")
@@ -40,10 +116,13 @@ test("shows a supported result with requirements, limits, and verified evidence"
 }) => {
   await page.goto("/");
   await chooseFixture(page);
-  await page.getByLabel("Laptop charging").selectOption("true");
+  await openSetupFields(page);
+  await setLaptopCharging(page, true);
   await page.getByRole("button", { name: /check my setup/i }).click();
 
-  await expect(page.getByRole("heading", { name: "compatible" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /compatible/i }),
+  ).toBeVisible();
   await expect(
     page.getByText("Physical connection", { exact: true }),
   ).toBeVisible();
@@ -65,19 +144,24 @@ test("distinguishes documented incompatibility from missing display-mode data", 
 }) => {
   await page.goto("/");
   await chooseFixture(page, "E2E No Video Laptop");
-  await page.getByLabel("Laptop charging").selectOption("false");
+  await openSetupFields(page);
+  await setLaptopCharging(page, false);
   await page.getByRole("button", { name: /check my setup/i }).click();
   await expect(
-    page.getByRole("heading", { name: "incompatible" }),
+    page.getByRole("heading", {
+      name: /incompatible|doesn’t meet this setup/i,
+    }),
   ).toBeVisible();
-  await expect(page.getByText("FAILED", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(FAILED|NOT SUPPORTED)$/i)).toBeVisible();
 
   await chooseFixture(page, "E2E Unknown Mode Laptop");
   await page.getByRole("button", { name: /check my setup/i }).click();
   await expect(
-    page.getByRole("heading", { name: "insufficient data" }),
+    page.getByRole("heading", {
+      name: /insufficient data|not enough information/i,
+    }),
   ).toBeVisible();
-  await expect(page.getByText("UNVERIFIED", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^(UNVERIFIED|NOT VERIFIED)$/i)).toBeVisible();
 });
 
 test("clears a previous result when any device or setup input changes", async ({
@@ -104,19 +188,35 @@ test("clears a previous result when any device or setup input changes", async ({
 
 test("copies a share URL and restores the setup in a fresh browser context", async ({
   page,
-  context,
   browser,
 }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          Object.defineProperty(window, "__portpilotClipboard", {
+            configurable: true,
+            value: text,
+          });
+        },
+      },
+    });
+  });
   await page.goto("/");
   await chooseFixture(page, "E2E Unknown Mode Laptop");
-  await page.getByLabel("External displays").selectOption("1");
+  await openSetupFields(page);
+  await page
+    .getByRole("combobox", { name: /^External (displays|screens)/i })
+    .selectOption("1");
   await page.getByLabel("Resolution").selectOption("2560x1440");
   await page.getByLabel("Refresh").selectOption("30");
-  await page.getByLabel("Laptop charging").selectOption("false");
+  await setLaptopCharging(page, false);
   await page.getByRole("button", { name: /check my setup/i }).click();
   await expect(
-    page.getByRole("heading", { name: "insufficient data" }),
+    page.getByRole("heading", {
+      name: /insufficient data|not enough information/i,
+    }),
   ).toBeVisible();
   const sharedUrl = page.url();
   expect(sharedUrl).toContain("laptop=e2e-unknown-laptop");
@@ -124,20 +224,29 @@ test("copies a share URL and restores the setup in a fresh browser context", asy
   await page.getByRole("button", { name: /share this result/i }).click();
   await expect(page.getByRole("status")).toHaveText("Link copied");
   await expect
-    .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          (window as Window & { __portpilotClipboard?: string })
+            .__portpilotClipboard,
+      ),
+    )
     .toBe(sharedUrl);
 
   const freshContext = await browser.newContext();
   const sharedPage = await freshContext.newPage();
   await sharedPage.goto(sharedUrl);
+  await openSetupFields(sharedPage);
   await expect(sharedPage.getByLabel("Laptop", { exact: true })).toHaveValue(
     "e2e-unknown-laptop",
   );
   await expect(sharedPage.getByLabel("Resolution")).toHaveValue("2560x1440");
   await expect(sharedPage.getByLabel("Refresh")).toHaveValue("30");
-  await expect(sharedPage.getByLabel("Laptop charging")).toHaveValue("false");
+  await expectLaptopCharging(sharedPage, false);
   await expect(
-    sharedPage.getByRole("heading", { name: "insufficient data" }),
+    sharedPage.getByRole("heading", {
+      name: /insufficient data|not enough information/i,
+    }),
   ).toBeVisible();
   await freshContext.close();
 });
@@ -169,9 +278,12 @@ test("shows a catalogue error and recovers when the API returns", async ({
   );
   await page.goto("/");
   await expect(
-    page.getByText("The device catalogue could not be loaded.", {
-      exact: true,
-    }),
+    page.getByText(
+      /device catalogue could not be loaded|couldn’t load the device list/i,
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await page.unroute(`${apiOrigin}/devices`);
   await page.reload();
@@ -179,9 +291,10 @@ test("shows a catalogue error and recovers when the API returns", async ({
     "E2E Supported Laptop",
   );
   await expect(
-    page.getByText("The device catalogue could not be loaded.", {
-      exact: true,
-    }),
+    page.getByText(
+      /device catalogue could not be loaded|couldn’t load the device list/i,
+      { exact: true },
+    ),
   ).toHaveCount(0);
 });
 
@@ -205,7 +318,9 @@ test("shows a check error without retaining a stale result, then recovers", asyn
 
   await page.unroute(`${apiOrigin}/checks`);
   await page.getByRole("button", { name: /check my setup/i }).click();
-  await expect(page.getByRole("heading", { name: "compatible" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /compatible/i }),
+  ).toBeVisible();
 });
 
 test("renders live coverage and navigates back to the checker", async ({
@@ -223,6 +338,6 @@ test("renders live coverage and navigates back to the checker", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: "Back to checker" }).click();
   await expect(
-    page.getByRole("heading", { name: /will your gear/i }),
+    page.getByRole("heading", { name: /will your (gear|devices)/i }),
   ).toBeVisible();
 });

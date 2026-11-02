@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 type Evidence = {
@@ -63,6 +63,7 @@ const defaultLaptopId = "lenovo-ideapad-slim-3-14irh10r";
 const defaultAccessoryId = "anker-364-usb-c-hub";
 
 export default function Home() {
+  const checkRequestVersion = useRef(0);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [laptopId, setLaptopId] = useState("");
   const [accessoryId, setAccessoryId] = useState("");
@@ -78,18 +79,24 @@ export default function Home() {
   const [shareMessage, setShareMessage] = useState("");
 
   function updateLaptopId(value: string) {
+    checkRequestVersion.current += 1;
+    setLoading(false);
     setLaptopId(value);
     setResult(null);
     setError("");
   }
 
   function updateAccessoryId(value: string) {
+    checkRequestVersion.current += 1;
+    setLoading(false);
     setAccessoryId(value);
     setResult(null);
     setError("");
   }
 
   function updateSetup(nextSetup: Setup) {
+    checkRequestVersion.current += 1;
+    setLoading(false);
     setSetup(nextSetup);
     setResult(null);
     setError("");
@@ -99,7 +106,8 @@ export default function Home() {
     nextLaptopId: string,
     nextAccessoryId: string,
     nextSetup: Setup,
-  ) {
+  ): Promise<boolean> {
+    const requestVersion = ++checkRequestVersion.current;
     setLoading(true);
     setError("");
     setResult(null);
@@ -117,7 +125,9 @@ export default function Home() {
         throw new Error(
           "The compatibility service could not complete this check.",
         );
-      setResult(await response.json());
+      const nextResult = (await response.json()) as Result;
+      if (requestVersion !== checkRequestVersion.current) return false;
+      setResult(nextResult);
       const url = new URL(window.location.href);
       url.search = new URLSearchParams({
         laptop: nextLaptopId,
@@ -128,14 +138,17 @@ export default function Home() {
         charging: String(nextSetup.laptop_charging),
       }).toString();
       window.history.replaceState({}, "", url);
+      return true;
     } catch (cause) {
+      if (requestVersion !== checkRequestVersion.current) return false;
       setError(
         cause instanceof Error
           ? cause.message
           : "Could not reach the PortPilot API. Start the backend and try again.",
       );
+      return false;
     } finally {
-      setLoading(false);
+      if (requestVersion === checkRequestVersion.current) setLoading(false);
     }
   }
 

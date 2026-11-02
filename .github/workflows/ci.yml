@@ -99,7 +99,7 @@ jobs:
         run: python -m pytest tests/test_postgres_api.py -q
       - name: Build standalone frontend
         working-directory: web
-        run: npm run build:standalone
+        run: npm run build:e2e
       - name: Run Chromium P0 journeys
         working-directory: web
         run: npm run e2e
