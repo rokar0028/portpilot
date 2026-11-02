@@ -1,8 +1,17 @@
 # Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
 api/.venv/
+api/portpilot.db
+api/*.sqlite
+api/*.sqlite3
 .venv/
+*.log
+*.err
+coverage.xml
+htmlcov/
 
 # Node / Next.js
 node_modules/
@@ -10,6 +19,7 @@ web/node_modules/
 web/.next/
 web/out/
 web/next-env.d.ts
+.DS_Store
 
 # Local environment
 .env

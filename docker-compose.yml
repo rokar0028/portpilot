@@ -1,15 +1,36 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: portpilot
+      POSTGRES_USER: portpilot
+      POSTGRES_PASSWORD: portpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portpilot -d portpilot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: ./api
     environment:
       FRONTEND_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql+psycopg://portpilot:portpilot@db:5432/portpilot
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
     volumes:
       - ./api:/app
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -17,12 +38,10 @@ services:
   web:
     build:
       context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
-    volumes:
-      - ./web:/app
-      - web_node_modules:/app/node_modules
-      - web_next:/app/.next
     ports:
       - "3000:3000"
     depends_on:
@@ -30,5 +49,4 @@ services:
         condition: service_healthy
 
 volumes:
-  web_node_modules:
-  web_next:
+  postgres_data:
