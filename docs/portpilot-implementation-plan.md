@@ -1,5 +1,9 @@
 # PortPilot implementation plan
 
+## V2 roadmap
+
+The next-stage improvements to this plan are tracked in the [PortPilot V2 implementation plan](v2-implementation-plan.md). It extends the current product and delivery plans with evidence review, exact model identity, shared capability definitions, combined display evaluation, accessibility, operations, AI parser evaluation, and release readiness. Use that document for V2 workstreams and acceptance criteria; this plan remains the reference for the original product scope and implementation direction.
+
 ## 1. Product decision
 
 **PortPilot** answers a narrow, expensive question before someone buys or opens a laptop accessory:
