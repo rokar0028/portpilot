@@ -280,3 +280,37 @@ def test_documented_laptop_display_count_limit_still_reports_a_specific_failure(
     assert any(
         item["name"] == "Display count" and item["status"] == "failed" for item in result["requirements"]
     )
+
+
+def test_configuration_match_does_not_abort_when_first_config_lacks_topology() -> None:
+    from app.rules import _configuration_match
+
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    configurations = [
+        {"displays": modes, "topology": None},
+        {"displays": modes, "topology": "extended"},
+    ]
+    assert _configuration_match(configurations, modes, "extended") is True
+
+
+def test_multi_display_modes_without_host_dp_reports_unmodeled_alternate_video_path() -> None:
+    laptop, accessory = records()
+    accessory["requirements"]["host_usb_c_video"] = False
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    accessory["outputs"]["display_configurations"] = [{"displays": modes, "topology": "extended"}]
+    result = check(laptop, accessory, displays=modes, display_topology="extended")
+    assert result["verdict"] == "insufficient_data"
+    req_details = {item["name"]: item["detail"] for item in result["requirements"]}
+    assert "The accessory does not require DisplayPort Alt Mode" in req_details.get(
+        "Laptop combined display mode", ""
+    )
+    assert not any(
+        "The request specifies a display count but not each simultaneous mode" in item["detail"]
+        for item in result["requirements"]
+    )

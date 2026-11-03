@@ -62,7 +62,7 @@ def _configuration_match(
             continue
         documented_topology = configuration.get("topology")
         if topology is not None and documented_topology is None:
-            return None
+            continue
         if topology is not None and documented_topology.strip().casefold() != topology.strip().casefold():
             continue
         return True
@@ -198,10 +198,8 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         else:
             laptop_resolution = None
             laptop_refresh = None
-        combined_modes_requested = (
-            setup.displays is not None
-            and (len(setup.displays) > 1 or setup.display_topology is not None)
-            and dp_required is True
+        combined_modes_requested = setup.displays is not None and (
+            len(setup.displays) > 1 or setup.display_topology is not None
         )
         laptop_mode_ok = (
             None
@@ -270,6 +268,22 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 ("Laptop", ports.get("display_configurations")),
                 ("Accessory", outputs.get("display_configurations")),
             ):
+                if label == "Laptop" and dp_required is False:
+                    add(
+                        "Laptop combined display mode",
+                        "unknown",
+                        "The accessory does not require DisplayPort Alt Mode, but its alternate video path "
+                        "from the laptop is not modeled.",
+                    )
+                    continue
+                if label == "Laptop" and dp_required is None:
+                    add(
+                        "Laptop combined display mode",
+                        "unknown",
+                        "The accessory source does not establish whether USB-C video is required; "
+                        "simultaneous display configuration from the laptop cannot be verified.",
+                    )
+                    continue
                 combined_match = _configuration_match(
                     configurations, setup.displays or [], setup.display_topology
                 )
