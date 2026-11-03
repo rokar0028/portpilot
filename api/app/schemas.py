@@ -4,17 +4,44 @@ from typing import Literal
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 
 
-class Setup(BaseModel):
-    external_displays: int = Field(default=1, ge=0, le=4)
-    resolution: str = "1920x1080"
-    refresh_rate_hz: int = Field(default=60, ge=24, le=240)
-    laptop_charging: bool = True
+class SetupRequest(BaseModel):
+    """Requested setup intent, shared by manual checks and natural-language parsing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    external_displays: int | None = Field(default=1, ge=0, le=4)
+    resolution: str | None = Field(default="1920x1080", max_length=30)
+    refresh_rate_hz: int | None = Field(default=60, ge=24, le=240)
+    laptop_charging: bool | None = True
+
+
+def default_setup_request() -> SetupRequest:
+    return SetupRequest(
+        external_displays=1,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
 
 
 class CheckRequest(BaseModel):
     laptop_id: str
     accessory_id: str
-    setup: Setup = Field(default_factory=Setup)
+    setup: SetupRequest = Field(default_factory=default_setup_request)
+
+
+class SetupParseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    description: str = Field(min_length=3, max_length=1000)
+
+
+class SetupParseResponse(BaseModel):
+    setup: SetupRequest
+    needs_clarification: bool
+    clarification_questions: list[str] = Field(default_factory=list, max_length=5)
+    unsupported_requests: list[str] = Field(default_factory=list, max_length=5)
+    notice: str = "Review or correct these requirements before checking compatibility."
 
 
 class SourceEvidenceRead(BaseModel):

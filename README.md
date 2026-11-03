@@ -32,10 +32,10 @@ python -m venv .venv
 python -m pip install -r requirements-dev.txt
 alembic upgrade head
 python -m app.seed
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8001
 ```
 
-The direct workflow uses a local SQLite file by default. The API is at http://localhost:8000, its health endpoint is http://localhost:8000/health, the evidence-backed catalogue is at http://localhost:8000/devices, and interactive API docs are at http://localhost:8000/docs.
+The direct workflow uses a local SQLite file by default. The API is at http://localhost:8001, its health endpoint is http://localhost:8001/health, the evidence-backed catalogue is at http://localhost:8001/devices, and interactive API docs are at http://localhost:8001/docs. PortPilot uses 8001 locally to avoid clashes with other common services on port 8000.
 
 ### Catalogue evidence
 
@@ -167,7 +167,7 @@ The Render Free preview configuration is prepared but not deployed. The default 
 
 ## Demo preparation
 
-See [the 90-second demo outline](demo-outline.md) for candidate compatible and incompatible checks, the result details to show, and the recording sequence.
+See [the 90-second demo outline](docs/demo-outline.md) for candidate compatible and incompatible checks, the result details to show, and the recording sequence.
 
 ## Project structure
 

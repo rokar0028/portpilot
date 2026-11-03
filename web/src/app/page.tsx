@@ -52,19 +52,35 @@ type Result = {
   rule_engine_version: string;
 };
 type Setup = {
-  external_displays: number;
-  resolution: string;
-  refresh_rate_hz: number;
-  laptop_charging: boolean;
+  external_displays: number | null;
+  resolution: string | null;
+  refresh_rate_hz: number | null;
+  laptop_charging: boolean | null;
+};
+type ParsedSetup = {
+  setup: Setup;
+  needs_clarification: boolean;
+  clarification_questions: string[];
+  unsupported_requests: string[];
+  notice: string;
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const defaultLaptopId = "lenovo-ideapad-slim-3-14irh10r";
-const defaultAccessoryId = "anker-364-usb-c-hub";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const exampleLaptopId = "lenovo-ideapad-slim-3-14irh10r";
+const exampleAccessoryId = "anker-nano-hub-7in1-a83d2";
+const exampleSetup: Setup = {
+  external_displays: 1,
+  resolution: "1920x1080",
+  refresh_rate_hz: 60,
+  laptop_charging: true,
+};
 
 export default function Home() {
   const checkRequestVersion = useRef(0);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [catalogError, setCatalogError] = useState(false);
   const [laptopId, setLaptopId] = useState("");
   const [accessoryId, setAccessoryId] = useState("");
   const [setup, setSetup] = useState<Setup>({
@@ -73,6 +89,10 @@ export default function Home() {
     refresh_rate_hz: 60,
     laptop_charging: true,
   });
+  const [setupDescription, setSetupDescription] = useState("");
+  const [parsedSetup, setParsedSetup] = useState<ParsedSetup | null>(null);
+  const [parsedSetupReviewed, setParsedSetupReviewed] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -98,8 +118,40 @@ export default function Home() {
     checkRequestVersion.current += 1;
     setLoading(false);
     setSetup(nextSetup);
+    if (parsedSetup) setParsedSetupReviewed(false);
     setResult(null);
     setError("");
+  }
+
+  async function parseDescription() {
+    setParsing(true);
+    setError("");
+    try {
+      const response = await fetch(`${API}/setup-requests/parse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: setupDescription }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(
+          data.detail?.message ?? "Setup parsing is unavailable.",
+        );
+      const parsed = data as ParsedSetup;
+      setSetup(parsed.setup);
+      setParsedSetup(parsed);
+      setParsedSetupReviewed(false);
+    } catch (cause) {
+      setError(
+        cause instanceof TypeError
+          ? "We couldn’t reach PortPilot. Check that the API is running, then try again."
+          : cause instanceof Error
+            ? cause.message
+            : "Setup interpretation is unavailable. You can still set the fields manually.",
+      );
+    } finally {
+      setParsing(false);
+    }
   }
 
   async function runCheck(
@@ -133,7 +185,7 @@ export default function Home() {
         laptop: nextLaptopId,
         accessory: nextAccessoryId,
         displays: String(nextSetup.external_displays),
-        resolution: nextSetup.resolution,
+        resolution: String(nextSetup.resolution),
         refresh: String(nextSetup.refresh_rate_hz),
         charging: String(nextSetup.laptop_charging),
       }).toString();
@@ -142,9 +194,11 @@ export default function Home() {
     } catch (cause) {
       if (requestVersion !== checkRequestVersion.current) return false;
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not reach the PortPilot API. Start the backend and try again.",
+        cause instanceof TypeError
+          ? "We couldn’t reach PortPilot. Check that the API is running, then try again."
+          : cause instanceof Error
+            ? cause.message
+            : "We couldn’t complete the check. Please try again.",
       );
       return false;
     } finally {
@@ -152,9 +206,40 @@ export default function Home() {
     }
   }
 
+  async function tryExample() {
+    if (
+      !catalog ||
+      !catalog.laptops.some((item) => item.id === exampleLaptopId) ||
+      !catalog.accessories.some((item) => item.id === exampleAccessoryId)
+    ) {
+      setError("The sample check is not available in the current catalogue.");
+      return;
+    }
+
+    setLaptopId(exampleLaptopId);
+    setAccessoryId(exampleAccessoryId);
+    setSetup(exampleSetup);
+    setSetupDescription("");
+    setParsedSetup(null);
+    setParsedSetupReviewed(false);
+    const checked = await runCheck(
+      exampleLaptopId,
+      exampleAccessoryId,
+      exampleSetup,
+    );
+    if (checked && window.matchMedia("(max-width: 800px)").matches) {
+      document.getElementById("result-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
+
   useEffect(() => {
     let active = true;
     async function loadCatalog() {
+      setCatalogLoading(true);
+      setCatalogError(false);
       try {
         const response = await fetch(`${API}/devices`);
         if (!response.ok)
@@ -168,22 +253,20 @@ export default function Home() {
             (item) => item.id === sharedLaptop,
           )
             ? sharedLaptop!
-            : data.laptops.some((item) => item.id === defaultLaptopId)
-              ? defaultLaptopId
-              : (data.laptops[0]?.id ?? "");
+            : "";
           const nextAccessory = data.accessories.some(
             (item) => item.id === sharedAccessory,
           )
             ? sharedAccessory!
-            : data.accessories.some((item) => item.id === defaultAccessoryId)
-              ? defaultAccessoryId
-              : (data.accessories[0]?.id ?? "");
+            : "";
           const requestedDisplays = Number(params.get("displays"));
           const requestedRefresh = Number(params.get("refresh"));
           const nextSetup: Setup = {
-            external_displays: [1, 2].includes(requestedDisplays)
-              ? requestedDisplays
-              : 1,
+            external_displays:
+              params.has("displays") &&
+              [0, 1, 2, 3, 4].includes(requestedDisplays)
+                ? requestedDisplays
+                : 1,
             resolution: ["1920x1080", "2560x1440", "3840x2160"].includes(
               params.get("resolution") ?? "",
             )
@@ -209,21 +292,19 @@ export default function Home() {
             void runCheck(nextLaptop, nextAccessory, nextSetup);
           }
         }
-      } catch (cause) {
+      } catch {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Could not reach the PortPilot API. Start the backend and try again.",
-          );
+          setCatalogError(true);
         }
+      } finally {
+        if (active) setCatalogLoading(false);
       }
     }
     void loadCatalog();
     return () => {
       active = false;
     };
-  }, []);
+  }, [catalogAttempt]);
 
   const selectedLaptop = catalog?.laptops.find((item) => item.id === laptopId);
   const selectedAccessory = catalog?.accessories.find(
@@ -232,6 +313,17 @@ export default function Home() {
 
   function sourceCount(evidence: Evidence[]) {
     return new Set(evidence.map((source) => source.url)).size;
+  }
+
+  function groupEvidence(evidence: Evidence[]) {
+    return Array.from(
+      evidence.reduce((groups, item) => {
+        const group = groups.get(item.url) ?? [];
+        group.push(item);
+        groups.set(item.url, group);
+        return groups;
+      }, new Map<string, Evidence[]>()),
+    );
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -270,13 +362,31 @@ export default function Home() {
           <span className="eyebrow-line" />
         </div>
         <h1>
-          Will your gear
+          Will your devices
           <br />
           <em>work together?</em>
         </h1>
         <p className="intro">
-          Pick a laptop, choose what you want to connect, and get a clear answer
-          backed by manufacturer specifications.
+          Choose the laptop you have and the dock, hub or charger you want to
+          connect. We’ll check their published specs against your screen and
+          charging needs.
+        </p>
+        <div className="hero-actions">
+          <span>
+            New here? Try a sample report, or choose your own devices below.
+          </span>
+          <button
+            className="sample-link"
+            type="button"
+            onClick={() => void tryExample()}
+            disabled={!catalog || loading}
+          >
+            Try a sample report <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <p className="sample-detail">
+          IdeaPad Slim 3 14IRH10R + Anker Nano Hub A83D2 · one 1080p display and
+          laptop charging.
         </p>
       </section>
 
@@ -287,10 +397,10 @@ export default function Home() {
               <span className="step">01</span>
               <h2>Your devices</h2>
             </div>
-            <span className="catalog-tag">STARTER CATALOGUE</span>
+            <span className="catalog-tag">VERIFIED MODELS</span>
           </div>
           <label className="field-label" htmlFor="laptop">
-            Laptop
+            Your laptop
           </label>
           <div className="select-wrap">
             <select
@@ -300,9 +410,11 @@ export default function Home() {
               onChange={(event) => updateLaptopId(event.target.value)}
               disabled={!catalog}
             >
+              <option value="">Choose your exact laptop model</option>
               {catalog?.laptops.map((laptop) => (
                 <option value={laptop.id} key={laptop.id}>
                   {laptop.name}
+                  {laptop.model_code ? ` · ${laptop.model_code}` : ""}
                 </option>
               ))}
             </select>
@@ -312,22 +424,48 @@ export default function Home() {
             <span className="device-icon laptop-icon">▱</span>
             <span>
               {selectedLaptop
-                ? `${selectedLaptop.model_code ?? selectedLaptop.id} · ${selectedLaptop.usb_c_video_supported === true ? `USB-C video, DP ${selectedLaptop.usb_c_dp_version ?? "version unknown"}` : selectedLaptop.usb_c_video_supported === false ? "USB-C video not supported" : "USB-C video unverified"} · PD ${selectedLaptop.usb_c_pd_input_min_w ?? "?"}–${selectedLaptop.usb_c_pd_input_max_w ?? "?"} W`
-                : "Loading laptop specifications…"}
+                ? `Selected model code: ${selectedLaptop.model_code ?? selectedLaptop.id}`
+                : catalogLoading
+                  ? "Loading laptop details…"
+                  : catalogError
+                    ? "Device list unavailable. Retry below."
+                    : "Choose the exact model; similar names can have different ports."}
             </span>
-            {selectedLaptop?.evidence[0] && (
-              <a
-                className="source-count"
-                href={selectedLaptop.evidence[0].url}
-                title={selectedLaptop.evidence[0].title}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {sourceCount(selectedLaptop.evidence)} source
-                {sourceCount(selectedLaptop.evidence) === 1 ? "" : "s"} ↗
-              </a>
-            )}
           </div>
+          {selectedLaptop && (
+            <details className="device-facts">
+              <summary>See verified details</summary>
+              <p>
+                USB-C display output:{" "}
+                {selectedLaptop.usb_c_video_supported === true
+                  ? `supported${selectedLaptop.usb_c_dp_version ? ` (DisplayPort ${selectedLaptop.usb_c_dp_version})` : ""}`
+                  : selectedLaptop.usb_c_video_supported === false
+                    ? "not supported"
+                    : "not documented"}
+                <br />
+                USB-C charging:{" "}
+                {selectedLaptop.usb_c_pd_input_max_w
+                  ? `up to ${selectedLaptop.usb_c_pd_input_max_w} W`
+                  : "not documented"}
+              </p>
+              {selectedLaptop.evidence.map((source) => (
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  key={source.id}
+                >
+                  {source.title} ↗
+                </a>
+              ))}
+            </details>
+          )}
+          <p className="catalog-help">
+            Can’t find your exact model?{" "}
+            <Link href="/coverage#supported-devices">
+              See supported devices and model-code tips.
+            </Link>
+          </p>
 
           <div className="connector">
             <span />
@@ -336,7 +474,7 @@ export default function Home() {
           </div>
 
           <label className="field-label" htmlFor="accessory">
-            Accessory
+            Connect a dock, hub or charger
           </label>
           <div className="select-wrap">
             <select
@@ -346,9 +484,11 @@ export default function Home() {
               onChange={(event) => updateAccessoryId(event.target.value)}
               disabled={!catalog}
             >
+              <option value="">Choose the exact model</option>
               {catalog?.accessories.map((accessory) => (
                 <option value={accessory.id} key={accessory.id}>
                   {accessory.name}
+                  {accessory.model_code ? ` · ${accessory.model_code}` : ""}
                 </option>
               ))}
             </select>
@@ -358,158 +498,319 @@ export default function Home() {
             <span className="device-icon hub-icon">▦</span>
             <span>
               {selectedAccessory
-                ? `${selectedAccessory.model_code ?? selectedAccessory.id} · ${selectedAccessory.category === "usb_c_charger" ? `USB-C charger · ${selectedAccessory.usb_c_output_max_w ?? "?"} W output` : `${selectedAccessory.hdmi_port_count ?? "?"} HDMI · ${selectedAccessory.hdmi_max_resolution ?? "?"} · ${selectedAccessory.requires_usb_c_dp_alt_mode === true ? "DP Alt Mode required" : "host video requirement unknown"}`}`
-                : "Loading accessory specifications…"}
+                ? `Selected model code: ${selectedAccessory.model_code ?? selectedAccessory.id}`
+                : catalogLoading
+                  ? "Loading accessory details…"
+                  : catalogError
+                    ? "Device list unavailable. Retry below."
+                    : "Choose the exact accessory model to check its documented features."}
             </span>
-            {selectedAccessory?.evidence[0] && (
-              <a
-                className="source-count"
-                href={selectedAccessory.evidence[0].url}
-                title={selectedAccessory.evidence[0].title}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {sourceCount(selectedAccessory.evidence)} source
-                {sourceCount(selectedAccessory.evidence) === 1 ? "" : "s"} ↗
-              </a>
-            )}
           </div>
+          {selectedAccessory && (
+            <details className="device-facts">
+              <summary>See verified details</summary>
+              <p>
+                {selectedAccessory.category === "usb_c_charger"
+                  ? `USB-C charging output: ${selectedAccessory.usb_c_output_max_w ? `up to ${selectedAccessory.usb_c_output_max_w} W` : "not documented"}`
+                  : `Display outputs: ${selectedAccessory.hdmi_port_count ?? "not documented"} HDMI · up to ${selectedAccessory.hdmi_max_resolution ?? "not documented"}${selectedAccessory.hdmi_max_refresh_hz ? ` at ${selectedAccessory.hdmi_max_refresh_hz} Hz` : ""}`}
+                {selectedAccessory.category !== "usb_c_charger" && (
+                  <>
+                    <br />
+                    Laptop must support USB-C video:{" "}
+                    {selectedAccessory.requires_usb_c_dp_alt_mode === true
+                      ? "yes"
+                      : selectedAccessory.requires_usb_c_dp_alt_mode === false
+                        ? "no"
+                        : "not documented"}
+                  </>
+                )}
+              </p>
+              {selectedAccessory.evidence.map((source) => (
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  key={source.id}
+                >
+                  {source.title} ↗
+                </a>
+              ))}
+            </details>
+          )}
+          <p className="catalog-help">
+            Not sure which version you have? Check its product code on the label
+            or manufacturer page; don’t choose a similar-looking model.
+          </p>
 
           <div className="divider" />
           <div className="section-head compact">
             <div>
               <span className="step">02</span>
-              <h2>Your setup</h2>
+              <h2>Screen &amp; charging</h2>
             </div>
           </div>
-          <div className="setup-grid">
-            <label>
-              <span className="field-label">External displays</span>
-              <div className="select-wrap">
-                <select
-                  name="displays"
-                  value={setup.external_displays}
-                  onChange={(event) =>
-                    updateSetup({
-                      ...setup,
-                      external_displays: Number(event.target.value),
-                    })
-                  }
+          <p className="setup-default-note">
+            By default, we’ll check one 1080p screen at 60 Hz and laptop
+            charging. Adjust these if your setup is different.
+          </p>
+          <details className="advanced-setup">
+            <summary>Adjust screen or charging needs</summary>
+            <div className="advanced-setup-content">
+              <div className="setup-parser">
+                <label className="field-label" htmlFor="setup-description">
+                  Describe your setup (optional)
+                </label>
+                <textarea
+                  id="setup-description"
+                  value={setupDescription}
+                  onChange={(event) => setSetupDescription(event.target.value)}
+                  maxLength={1000}
+                  placeholder="For example: one 4K display at 60 Hz and laptop charging"
+                  rows={3}
+                />
+                <p className="parser-privacy">
+                  Only this description is sent to the configured parsing
+                  provider. Don’t include personal information.
+                </p>
+                <button
+                  className="parse-button"
+                  type="button"
+                  onClick={() => void parseDescription()}
+                  disabled={parsing || setupDescription.trim().length < 3}
                 >
-                  <option value="1">1 display</option>
-                  <option value="2">2 displays</option>
-                </select>
-                <span>⌄</span>
+                  {parsing ? "Interpreting setup…" : "Interpret setup"}
+                </button>
+                {parsedSetup && (
+                  <div className="parse-review" role="status">
+                    <strong>
+                      Review these extracted fields and correct them below.
+                    </strong>
+                    <p>{parsedSetup.notice}</p>
+                    {parsedSetup.needs_clarification && (
+                      <p>
+                        Needs clarification:{" "}
+                        {parsedSetup.clarification_questions.join(" ")}
+                      </p>
+                    )}
+                    {parsedSetup.unsupported_requests.length > 0 && (
+                      <p>
+                        Not checked:{" "}
+                        {parsedSetup.unsupported_requests.join("; ")}
+                      </p>
+                    )}
+                    {Object.entries(parsedSetup.setup).some(
+                      ([, value]) => value === null,
+                    ) && (
+                      <p>
+                        Some fields are unknown. Fill in any requirement you
+                        want checked.
+                      </p>
+                    )}
+                    <label className="review-confirm">
+                      <input
+                        type="checkbox"
+                        checked={parsedSetupReviewed}
+                        onChange={(event) =>
+                          setParsedSetupReviewed(event.target.checked)
+                        }
+                      />
+                      I reviewed these requirements
+                    </label>
+                  </div>
+                )}
               </div>
-            </label>
-            <label>
-              <span className="field-label">Resolution</span>
-              <div className="select-wrap">
-                <select
-                  name="resolution"
-                  value={setup.resolution}
-                  onChange={(event) =>
-                    updateSetup({ ...setup, resolution: event.target.value })
-                  }
-                >
-                  <option value="1920x1080">1080p</option>
-                  <option value="2560x1440">1440p</option>
-                  <option value="3840x2160">4K UHD</option>
-                </select>
-                <span>⌄</span>
+              <div className="setup-grid">
+                <label>
+                  <span className="field-label">External screens</span>
+                  <div className="select-wrap">
+                    <select
+                      name="displays"
+                      value={setup.external_displays ?? ""}
+                      onChange={(event) =>
+                        updateSetup({
+                          ...setup,
+                          external_displays: event.target.value
+                            ? Number(event.target.value)
+                            : null,
+                        })
+                      }
+                    >
+                      <option value="" disabled>
+                        Choose display count
+                      </option>
+                      {[0, 1, 2, 3, 4].map((count) => (
+                        <option value={count} key={count}>
+                          {count} display{count === 1 ? "" : "s"}
+                        </option>
+                      ))}
+                    </select>
+                    <span>⌄</span>
+                  </div>
+                </label>
+                <label>
+                  <span className="field-label">Resolution</span>
+                  <div className="select-wrap">
+                    <select
+                      name="resolution"
+                      value={setup.resolution ?? ""}
+                      onChange={(event) =>
+                        updateSetup({
+                          ...setup,
+                          resolution: event.target.value || null,
+                        })
+                      }
+                    >
+                      <option value="" disabled>
+                        Choose resolution
+                      </option>
+                      {setup.resolution &&
+                        !["1920x1080", "2560x1440", "3840x2160"].includes(
+                          setup.resolution,
+                        ) && (
+                          <option value={setup.resolution}>
+                            {setup.resolution}
+                          </option>
+                        )}
+                      <option value="1920x1080">1080p</option>
+                      <option value="2560x1440">1440p</option>
+                      <option value="3840x2160">4K UHD</option>
+                    </select>
+                    <span>⌄</span>
+                  </div>
+                </label>
               </div>
-            </label>
-          </div>
-          <div className="setup-bottom">
-            <label className="check-option">
-              <input
-                type="checkbox"
-                name="charging"
-                checked={setup.laptop_charging}
-                onChange={(event) =>
-                  updateSetup({ ...setup, laptop_charging: event.target.checked })
-                }
-              />
-              <span className="custom-check">✓</span>
-              <span>Charge my laptop through this accessory</span>
-            </label>
-            <label className="refresh">
-              <span className="field-label">Refresh</span>
-              <select
-                name="refresh"
-                value={setup.refresh_rate_hz}
-                onChange={(event) =>
-                  updateSetup({
-                    ...setup,
-                    refresh_rate_hz: Number(event.target.value),
-                  })
-                }
+              <div className="setup-bottom">
+                <label className="charging-select">
+                  <span className="field-label">Charge laptop through it?</span>
+                  <select
+                    name="charging"
+                    value={
+                      setup.laptop_charging === null
+                        ? ""
+                        : String(setup.laptop_charging)
+                    }
+                    onChange={(event) =>
+                      updateSetup({
+                        ...setup,
+                        laptop_charging:
+                          event.target.value === ""
+                            ? null
+                            : event.target.value === "true",
+                      })
+                    }
+                  >
+                    <option value="">Unknown</option>
+                    <option value="true">Required</option>
+                    <option value="false">Not needed</option>
+                  </select>
+                </label>
+                <label className="refresh">
+                  <span className="field-label">Refresh</span>
+                  <select
+                    name="refresh"
+                    value={setup.refresh_rate_hz ?? ""}
+                    onChange={(event) =>
+                      updateSetup({
+                        ...setup,
+                        refresh_rate_hz: event.target.value
+                          ? Number(event.target.value)
+                          : null,
+                      })
+                    }
+                  >
+                    <option value="" disabled>
+                      Choose refresh
+                    </option>
+                    {setup.refresh_rate_hz &&
+                      ![30, 60].includes(setup.refresh_rate_hz) && (
+                        <option value={setup.refresh_rate_hz}>
+                          {setup.refresh_rate_hz} Hz
+                        </option>
+                      )}
+                    <option value="60">60 Hz</option>
+                    <option value="30">30 Hz</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </details>
+          {catalogError && (
+            <div className="catalog-error" role="alert">
+              <div>
+                <strong>We couldn’t load the device list.</strong>
+                <span>
+                  Make sure the PortPilot API is running at localhost:8001, then
+                  retry.
+                </span>
+              </div>
+              <button
+                className="catalog-retry"
+                type="button"
+                onClick={() => setCatalogAttempt((attempt) => attempt + 1)}
               >
-                <option value="60">60 Hz</option>
-                <option value="30">30 Hz</option>
-              </select>
-            </label>
-          </div>
-          <button
-            className="submit"
-            type="submit"
-            disabled={
-              loading ||
-              !catalog ||
-              !catalog.laptops.length ||
-              !catalog.accessories.length ||
-              !laptopId ||
-              !accessoryId
-            }
-          >
-            {loading ? (
-              "Checking specifications…"
-            ) : !catalog ? (
-              "Loading catalogue…"
-            ) : !catalog.laptops.length || !catalog.accessories.length ? (
-              "Catalogue unavailable"
-            ) : (
-              <>
-                Check my setup <span>→</span>
-              </>
-            )}
-          </button>
+                Try again
+              </button>
+            </div>
+          )}
+          {!catalogError && (
+            <button
+              className="submit"
+              type="submit"
+              disabled={
+                loading ||
+                catalogLoading ||
+                parsing ||
+                (parsedSetup !== null && !parsedSetupReviewed) ||
+                !catalog ||
+                !catalog.laptops.length ||
+                !catalog.accessories.length ||
+                !laptopId ||
+                !accessoryId
+              }
+            >
+              {loading ? (
+                "Checking specifications…"
+              ) : catalogLoading || !catalog ? (
+                "Loading devices…"
+              ) : !catalog.laptops.length || !catalog.accessories.length ? (
+                "Catalogue unavailable"
+              ) : (
+                <>
+                  Check my setup <span>→</span>
+                </>
+              )}
+            </button>
+          )}
+          {error && (
+            <p className="error-banner form-error" role="alert">
+              {error}
+            </p>
+          )}
           <p className="privacy-note">
             <span>✳</span> Checks use documented specs. If something can’t be
             verified, we’ll say so.
           </p>
         </form>
 
-        <aside className="result-panel" aria-live="polite">
-          {!result ? (
+        <aside className="result-panel" id="result-panel" aria-live="polite">
+          {loading ? (
+            <div className="checking-result" role="status">
+              <span className="loading-spinner" aria-hidden="true" />
+              <h2>Checking your setup</h2>
+              <p>Comparing your devices with their published specifications…</p>
+            </div>
+          ) : !result ? (
             <div className="empty-result">
-              <div className="orbit">
-                <span className="orbit-center">?</span>
-                <i className="orbit-dot dot-a" />
-                <i className="orbit-dot dot-b" />
-                <i className="orbit-dot dot-c" />
-              </div>
               <span className="result-kicker">YOUR RESULT</span>
-              <h2>
-                Clarity before
-                <br />
-                you connect.
-              </h2>
+              <h2>Your answer will appear here</h2>
               <p>
-                Your compatibility report will show what works, what’s limited,
-                and what the specs don’t tell us.
+                Choose your devices, then check whether they support your setup.
               </p>
-              <div className="empty-legend">
-                <span>
-                  <i className="legend green" /> Supported
-                </span>
-                <span>
-                  <i className="legend amber" /> Needs a check
-                </span>
-                <span>
-                  <i className="legend red" /> Not supported
-                </span>
-              </div>
+              <ol className="empty-steps">
+                <li>Choose your laptop model</li>
+                <li>Choose your dock, hub or charger</li>
+                <li>Press “Check my setup”</li>
+              </ol>
             </div>
           ) : (
             <div className="report">
@@ -535,11 +836,21 @@ export default function Home() {
                     : "?"}
               </div>
               <h2 className="verdict-title">
-                {result.verdict === "compatible_with_limits"
-                  ? "Works with limits"
-                  : result.verdict.replaceAll("_", " ")}
+                {result.verdict === "compatible"
+                  ? "Looks compatible"
+                  : result.verdict === "compatible_with_limits"
+                    ? "Works with limits"
+                    : result.verdict === "incompatible"
+                      ? "Doesn’t meet this setup"
+                      : "Not enough information"}
               </h2>
               <p className="verdict-summary">{result.summary}</p>
+              {result.verdict === "insufficient_data" && (
+                <p className="result-caveat">
+                  Not verified means we don’t have enough published information;
+                  it doesn’t prove the setup won’t work.
+                </p>
+              )}
               <button
                 className="share-button"
                 type="button"
@@ -575,8 +886,10 @@ export default function Home() {
                     </div>
                     <span className={`status-label ${item.status}`}>
                       {item.status === "unknown"
-                        ? "UNVERIFIED"
-                        : item.status.toUpperCase()}
+                        ? "NOT VERIFIED"
+                        : item.status === "passed"
+                          ? "SUPPORTED"
+                          : "NOT SUPPORTED"}
                     </span>
                   </div>
                 ))}
@@ -588,21 +901,30 @@ export default function Home() {
                   {result.evidence.length} capability records
                 </span>
               </div>
-              {result.evidence.map((item) => (
-                <a
-                  className="evidence-card"
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  key={item.id}
-                >
-                  <span className="evidence-check">↗</span>
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>“{item.excerpt}”</small>
-                  </span>
-                </a>
-              ))}
+              <div className="evidence-list">
+                {groupEvidence(result.evidence).map(([url, records]) => (
+                  <details className="evidence-source" key={url}>
+                    <summary>
+                      <span>{records[0].title}</span>
+                      <small>{records.length} records</small>
+                    </summary>
+                    <div className="evidence-records">
+                      {records.map((item) => (
+                        <a
+                          className="evidence-card"
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          key={item.id}
+                        >
+                          <span className="evidence-check">↗</span>
+                          <small>“{item.excerpt}”</small>
+                        </a>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
             </div>
           )}
         </aside>
@@ -648,11 +970,6 @@ export default function Home() {
           </p>
         </details>
       </section>
-      {error && (
-        <p className="error-banner" role="alert">
-          {error}
-        </p>
-      )}
       <footer>
         <span>
           PORTPILOT <span className="footer-dot">·</span> BUILT FOR BETTER

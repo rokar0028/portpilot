@@ -124,3 +124,22 @@ def test_charger_uses_its_usb_c_output_rating_for_charging() -> None:
     )
 
     assert accessory_rule_record(charger)["outputs"]["charging_output_watts"] == 65
+
+
+def test_unknown_setup_requirements_produce_insufficient_data(client) -> None:
+    result = check_compatibility(
+        CheckRequest(
+            laptop_id="api-laptop",
+            accessory_id="api-hub",
+            setup={
+                "external_displays": None,
+                "resolution": None,
+                "refresh_rate_hz": None,
+                "laptop_charging": None,
+            },
+        ),
+        client,
+    )
+
+    assert result.verdict == "insufficient_data"
+    assert any(item["status"] == "unknown" for item in result.requirements)

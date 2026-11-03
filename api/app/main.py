@@ -22,8 +22,11 @@ from .schemas import (
     CheckRequest,
     CheckResponse,
     LaptopRead,
+    SetupParseRequest,
+    SetupParseResponse,
     SourceEvidenceRead,
 )
+from .setup_parser import ParserInvalidResponse, ParserUnavailable, parse_setup
 
 load_dotenv()
 
@@ -32,10 +35,27 @@ app = FastAPI(
     version="0.2.0",
     description="Evidence-backed laptop and accessory compatibility checks.",
 )
-frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+frontend_origins = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+# Next.js uses the next available port when 3000 is occupied. Permit that
+# alternate local development port when the configured origin is localhost.
+if any(origin in {"http://localhost:3000", "http://127.0.0.1:3000"} for origin in frontend_origins):
+    frontend_origins.extend(
+        origin
+        for origin in (
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+        )
+        if origin not in frontend_origins
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_origin],
+    allow_origins=frontend_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
@@ -182,6 +202,28 @@ def devices(session: Session = Depends(get_session)) -> CatalogRead:
         laptops=[laptop_read(laptop) for laptop in laptops],
         accessories=[accessory_read(accessory) for accessory in accessories],
     )
+
+
+@app.post("/setup-requests/parse", response_model=SetupParseResponse)
+def parse_setup_request(request: SetupParseRequest) -> SetupParseResponse:
+    try:
+        response = parse_setup(request.description)
+    except ParserUnavailable as error:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "setup_parser_unavailable", "message": str(error)},
+        ) from error
+    except ParserInvalidResponse as error:
+        raise HTTPException(
+            status_code=502,
+            detail={"code": "setup_parser_invalid_response", "message": str(error)},
+        ) from error
+    log_event(
+        "setup_request_parsed",
+        needs_clarification=response.needs_clarification,
+        unsupported_count=len(response.unsupported_requests),
+    )
+    return response
 
 
 @app.get("/devices/laptops/{device_id}", response_model=LaptopRead)

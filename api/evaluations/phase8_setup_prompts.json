@@ -1,0 +1,29 @@
+[
+  {
+    "id": "single-1080p-charge",
+    "prompt": "One 1080p monitor at 60 Hz and charge my laptop through the hub.",
+    "expected": {"external_displays": 1, "resolution": "1920x1080", "refresh_rate_hz": 60, "laptop_charging": true}
+  },
+  {
+    "id": "two-4k-no-charge",
+    "prompt": "Two 4K displays at 60 Hz; I do not need laptop charging.",
+    "expected": {"external_displays": 2, "resolution": "3840x2160", "refresh_rate_hz": 60, "laptop_charging": false}
+  },
+  {
+    "id": "underspecified-display",
+    "prompt": "Connect a monitor to my laptop.",
+    "expected": {"external_displays": 1, "resolution": null, "refresh_rate_hz": null, "laptop_charging": null}
+  },
+  {
+    "id": "ambiguous-many",
+    "prompt": "I want several high-resolution screens.",
+    "expected": {"external_displays": null, "resolution": null, "refresh_rate_hz": null, "laptop_charging": null},
+    "expect_clarification": true
+  },
+  {
+    "id": "unsupported-ethernet",
+    "prompt": "One 1440p monitor and Ethernet, no charging needed.",
+    "expected": {"external_displays": 1, "resolution": "2560x1440", "refresh_rate_hz": null, "laptop_charging": false},
+    "expect_unsupported": true
+  }
+]

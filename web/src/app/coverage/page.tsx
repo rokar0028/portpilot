@@ -4,11 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Catalog = {
-  laptops: { id: string }[];
-  accessories: { id: string; category: string }[];
+  laptops: {
+    id: string;
+    brand: string;
+    name: string;
+    model_code: string | null;
+  }[];
+  accessories: {
+    id: string;
+    brand: string;
+    name: string;
+    model_code: string | null;
+    category: string;
+  }[];
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
 export default function CoveragePage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -127,6 +138,51 @@ export default function CoveragePage() {
           Current accessory categories:{" "}
           {categories.join(", ").replaceAll("_", " ")}.
         </p>
+      )}
+      {catalog && (
+        <section className="supported-devices" id="supported-devices">
+          <div>
+            <span className="eyebrow">CHECK YOUR MODEL</span>
+            <h2>Currently supported devices</h2>
+            <p>
+              Match the full model name or product code before running a check.
+              Similar model names can have different ports and capabilities.
+            </p>
+          </div>
+          <div className="supported-device-columns">
+            <article>
+              <h3>Laptops</h3>
+              <ul>
+                {catalog.laptops.map((laptop) => (
+                  <li key={laptop.id}>
+                    <strong>{laptop.name}</strong>
+                    <span>{laptop.model_code ?? laptop.brand}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article>
+              <h3>Accessories</h3>
+              <ul>
+                {catalog.accessories.map((accessory) => (
+                  <li key={accessory.id}>
+                    <strong>{accessory.name}</strong>
+                    <span>
+                      {accessory.model_code ?? accessory.brand} ·{" "}
+                      {accessory.category.replaceAll("_", " ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+          <p className="unsupported-device-note">
+            <strong>Can’t find an exact match?</strong> Don’t select a similar
+            model. Check the product code on your laptop’s label or the
+            manufacturer support page. PortPilot can only give a reliable result
+            for models in this verified list.
+          </p>
+        </section>
       )}
       <footer>
         <span>PORTPILOT · EVIDENCE FIRST</span>

@@ -9,11 +9,16 @@ RULE_ENGINE_VERSION = "0.2.0"
 def _mode_at_least(
     maximum_resolution: str | None,
     maximum_refresh: int | None,
-    requested_resolution: str,
-    requested_refresh: int,
+    requested_resolution: str | None,
+    requested_refresh: int | None,
 ) -> bool | None:
     """Return whether a maximum display mode covers the request, or None if unknown."""
-    if maximum_resolution is None or maximum_refresh is None:
+    if (
+        maximum_resolution is None
+        or maximum_refresh is None
+        or requested_resolution is None
+        or requested_refresh is None
+    ):
         return None
 
     def dimensions(value: str) -> tuple[int, int] | None:
@@ -69,7 +74,9 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             f"Host connection type {accessory['host_connection']} is not modeled yet.",
         )
 
-    if setup.external_displays:
+    if setup.external_displays is None:
+        add("Display count", "unknown", "The requested external display count is not established.")
+    elif setup.external_displays:
         dp_required = requirements.get("host_usb_c_video")
         if dp_required is True:
             video_supported = ports.get("usb_c_video_supported")
@@ -211,7 +218,9 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "displays at the same time.",
             )
 
-    if setup.laptop_charging:
+    if setup.laptop_charging is None:
+        add("Charging", "unknown", "Whether laptop charging is required is not established.")
+    elif setup.laptop_charging:
         laptop_min = ports.get("usb_c_pd_input_min_w")
         laptop_max = ports.get("usb_c_pd_input_max_w")
         accessory_watts = outputs.get("charging_output_watts")
