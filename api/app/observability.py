@@ -56,17 +56,53 @@ def _escape_label(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
-class Metrics:
-    """Small process-local counters exposed in Prometheus text format."""
+HISTOGRAM_BUCKETS: tuple[float, ...] = (
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+)
 
-    def __init__(self) -> None:
+
+class Metrics:
+    """Small process-local counters and request-duration distributions in Prometheus text format."""
+
+    def __init__(self, buckets: tuple[float, ...] = HISTOGRAM_BUCKETS) -> None:
         self._lock = Lock()
+        self._buckets = tuple(sorted(buckets))
+        self._bucket_pairs = [(b, str(b)) for b in self._buckets]
         self._http_requests: Counter[tuple[str, str, str]] = Counter()
         self._checks: Counter[tuple[str, str]] = Counter()
+        self._http_duration_buckets: Counter[tuple[str, str, str, str]] = Counter()
+        self._http_duration_counts: Counter[tuple[str, str, str]] = Counter()
+        self._http_duration_sums: Counter[tuple[str, str, str]] = Counter()
 
-    def record_request(self, method: str, route: str, status_code: int) -> None:
+    def record_request(
+        self,
+        method: str,
+        route: str,
+        status_code: int | str,
+        duration_seconds: float | None = None,
+    ) -> None:
+        status_str = str(status_code)
+        key = (method, route, status_str)
         with self._lock:
-            self._http_requests[(method, route, str(status_code))] += 1
+            self._http_requests[key] += 1
+            if duration_seconds is not None:
+                duration = max(0.0, float(duration_seconds))
+                self._http_duration_counts[key] += 1
+                self._http_duration_sums[key] += duration
+                for threshold, label in self._bucket_pairs:
+                    if duration <= threshold:
+                        self._http_duration_buckets[(method, route, status_str, label)] += 1
+                self._http_duration_buckets[(method, route, status_str, "+Inf")] += 1
 
     def record_check(self, verdict: str, rule_engine_version: str) -> None:
         with self._lock:
@@ -76,9 +112,12 @@ class Metrics:
         with self._lock:
             requests = self._http_requests.copy()
             checks = self._checks.copy()
+            duration_buckets = self._http_duration_buckets.copy()
+            duration_counts = self._http_duration_counts.copy()
+            duration_sums = self._http_duration_sums.copy()
 
         lines = [
-            "# HELP portpilot_http_requests_total API requests by method, route, and status.",
+            "# HELP portpilot_http_requests_total Process-local API requests by method, route, and status.",
             "# TYPE portpilot_http_requests_total counter",
         ]
         for (method, route, status_code), count in sorted(requests.items()):
@@ -87,6 +126,33 @@ class Metrics:
                 f'status="{_escape_label(status_code)}"'
             )
             lines.append(f"portpilot_http_requests_total{{{labels}}} {count}")
+
+        lines.extend(
+            [
+                "# HELP portpilot_http_request_duration_seconds Process-local HTTP request duration "
+                "in seconds by method, route, and status.",
+                "# TYPE portpilot_http_request_duration_seconds histogram",
+            ]
+        )
+        for (method, route, status_code), count in sorted(duration_counts.items()):
+            labels_base = (
+                f'method="{_escape_label(method)}",route="{_escape_label(route)}",'
+                f'status="{_escape_label(status_code)}"'
+            )
+            for _, label in self._bucket_pairs:
+                bucket_count = duration_buckets.get((method, route, status_code, label), 0)
+                bucket_entry = (
+                    f'portpilot_http_request_duration_seconds_bucket{{{labels_base},le="{label}"}} '
+                    f"{bucket_count}"
+                )
+                lines.append(bucket_entry)
+            inf_count = duration_buckets.get((method, route, status_code, "+Inf"), count)
+            lines.append(
+                f'portpilot_http_request_duration_seconds_bucket{{{labels_base},le="+Inf"}} {inf_count}'
+            )
+            total_sum = duration_sums.get((method, route, status_code), 0.0)
+            lines.append(f"portpilot_http_request_duration_seconds_sum{{{labels_base}}} {total_sum:.6f}")
+            lines.append(f"portpilot_http_request_duration_seconds_count{{{labels_base}}} {count}")
 
         lines.extend(
             [

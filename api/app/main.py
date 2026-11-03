@@ -67,6 +67,9 @@ app.add_middleware(
 app.include_router(catalog_admin_router)
 
 
+SLOW_REQUEST_THRESHOLD_MS = float(os.getenv("SLOW_REQUEST_THRESHOLD_MS", "500"))
+
+
 @app.middleware("http")
 async def observe_request(request: Request, call_next):
     request_id = uuid4().hex
@@ -85,11 +88,17 @@ async def observe_request(request: Request, call_next):
             content={"detail": "Internal server error."},
         )
 
-    elapsed_ms = round((perf_counter() - started_at) * 1000, 2)
+    elapsed_seconds = perf_counter() - started_at
+    elapsed_ms = round(elapsed_seconds * 1000, 2)
     route = request.scope.get("route")
     route_template = getattr(route, "path", "unmatched")
     response.headers["X-Request-ID"] = request_id
-    metrics.record_request(request.method, route_template, status_code)
+    metrics.record_request(
+        request.method,
+        route_template,
+        status_code,
+        duration_seconds=elapsed_seconds,
+    )
     log_event(
         "http_request",
         level=logging.ERROR
@@ -105,6 +114,18 @@ async def observe_request(request: Request, call_next):
         elapsed_ms=elapsed_ms,
         **({"error_type": error_type} if error_type else {}),
     )
+    if elapsed_ms >= SLOW_REQUEST_THRESHOLD_MS:
+        log_event(
+            "http_slow_request",
+            level=logging.ERROR if status_code >= 500 else logging.WARNING,
+            request_id=request_id,
+            method=request.method,
+            path=route_template,
+            route=route_template,
+            status_code=status_code,
+            elapsed_ms=elapsed_ms,
+            **({"error_type": error_type} if error_type else {}),
+        )
     request_id_context.reset(request_context_token)
     return response
 

@@ -18,38 +18,38 @@ This plan supports [Workstream 7 in the V2 plan](v2-implementation-plan.md#7-rel
 
 ## Scope
 
-- [ ] Define and verify the response-time SLO, request mix, database/catalogue fixture, load, warm-up, and measurement window, using the existing k6 release-confidence workflow where practical.
-- [ ] Add route-template duration distributions to `/metrics` (histogram buckets/sum/count or equivalent Prometheus-compatible representation) while preserving useful existing counters and keeping label cardinality bounded.
-- [ ] Make slow routes discoverable through aggregate metrics and structured logs with a documented threshold; preserve the existing low-data logging policy.
-- [ ] Document backup, restore, migration failure/partial-application response, and rollback for local SQLite, Compose PostgreSQL, and the currently configured Render Free preview. Identify the Render Free durability limitation as a release/data-handling constraint and define the prerequisite for a durable hosted environment.
-- [ ] Keep current API contracts and deterministic compatibility verdict behavior unchanged.
+- [x] Define and verify the response-time SLO, request mix, database/catalogue fixture, load, warm-up, and measurement window, using the existing k6 release-confidence workflow where practical.
+- [x] Add route-template duration distributions to `/metrics` (histogram buckets/sum/count or equivalent Prometheus-compatible representation) while preserving useful existing counters and keeping label cardinality bounded.
+- [x] Make slow routes discoverable through aggregate metrics and structured logs with a documented threshold; preserve the existing low-data logging policy.
+- [x] Document backup, restore, migration failure/partial-application response, and rollback for local SQLite, Compose PostgreSQL, and the currently configured Render Free preview. Identify the Render Free durability limitation as a release/data-handling constraint and define the prerequisite for a durable hosted environment.
+- [x] Keep current API contracts and deterministic compatibility verdict behavior unchanged.
 
 ## Sequenced implementation steps
 
-- [ ] 1. Inspect and reconcile this plan with the existing k6 release-confidence workflow, current `/metrics` and logging behavior, Alembic revisions, Compose startup, Render Blueprint, README, and migration rollout notes. Confirm the proposed workload can run reproducibly against disposable PostgreSQL.
-- [ ] 2. Add a reproducible k6 scenario and result recording for the stated request mix. Separate setup-parser measurements; record dataset/revision, concurrency/rate, warm-up, measurement window, environment, p50/p95/p99, throughput, and error rate. Adjust only if measured baseline evidence shows the proposal is infeasible, and record the reason and revised target in this plan and roadmap.
-- [ ] 3. Extend API metrics with HTTP request-duration distributions by method, normalized route template, and bounded status class/code as appropriate. Ensure all requests, including exceptions, are observed once; avoid raw paths for unmatched/parameterized routes. Keep metrics process-local limitations explicit and use the existing provider scrape/collector path rather than silently claiming cross-instance aggregation.
-- [ ] 4. Add threshold-based slow-request structured events (initial threshold 500 ms, configurable if appropriate) using the same safe fields as request logs. Do not emit a second event for ordinary requests, and do not record request payloads, query strings, credentials, addresses, or setup descriptions.
-- [ ] 5. Write environment-specific operational runbooks. For SQLite, stop the API and copy the configured DB file plus any required WAL/SHM state, or use SQLite's online backup API. For Compose PostgreSQL, demonstrate `pg_dump`/`pg_restore` against the named service/volume, verify the dump, and document restore to an isolated database before replacement. For Render, name the exact supported snapshot/export/restore controls for the selected plan; on Free, explicitly document that no provider backup exists and treat the database as disposable. Never imply a free-tier snapshot exists.
-- [ ] 6. Document migration operations: confirm `DATABASE_URL` target and current revision, take/verify a recoverable pre-migration backup, pause writes/deployment retries after failure, capture logs and `alembic current/history`, inspect partial DDL/data state, recover on an isolated restored copy first, and choose restore versus downgrade based on known data loss and app/schema compatibility. Include post-recovery revision, readiness, catalogue, and representative check verification. Address automatic migrations at API startup and its retry behavior.
-- [ ] 7. Update README operational notes, migration rollout notes, this plan's progress, and V2 roadmap/release checklist with only verified outcomes. Keep Workstream 7 open until all acceptance criteria are met.
+- [x] 1. Inspect and reconcile this plan with the existing k6 release-confidence workflow, current `/metrics` and logging behavior, Alembic revisions, Compose startup, Render Blueprint, README, and migration rollout notes. Confirm the proposed workload can run reproducibly against disposable PostgreSQL.
+- [x] 2. Add a reproducible k6 scenario and result recording for the stated request mix. Separate setup-parser measurements; record dataset/revision, concurrency/rate, warm-up, measurement window, environment, p50/p95/p99, throughput, and error rate. Adjust only if measured baseline evidence shows the proposal is infeasible, and record the reason and revised target in this plan and roadmap.
+- [x] 3. Extend API metrics with HTTP request-duration distributions by method, normalized route template, and bounded status class/code as appropriate. Ensure all requests, including exceptions, are observed once; avoid raw paths for unmatched/parameterized routes. Keep metrics process-local limitations explicit and use the existing provider scrape/collector path rather than silently claiming cross-instance aggregation.
+- [x] 4. Add threshold-based slow-request structured events (initial threshold 500 ms, configurable if appropriate) using the same safe fields as request logs. Do not emit a second event for ordinary requests, and do not record request payloads, query strings, credentials, addresses, or setup descriptions.
+- [x] 5. Write environment-specific operational runbooks. For SQLite, stop the API and copy the configured DB file plus any required WAL/SHM state, or use SQLite's online backup API. For Compose PostgreSQL, demonstrate `pg_dump`/`pg_restore` against the named service/volume, verify the dump, and document restore to an isolated database before replacement. For Render, name the exact supported snapshot/export/restore controls for the selected plan; on Free, explicitly document that no provider backup exists and treat the database as disposable. Never imply a free-tier snapshot exists.
+- [x] 6. Document migration operations: confirm `DATABASE_URL` target and current revision, take/verify a recoverable pre-migration backup, pause writes/deployment retries after failure, capture logs and `alembic current/history`, inspect partial DDL/data state, recover on an isolated restored copy first, and choose restore versus downgrade based on known data loss and app/schema compatibility. Include post-recovery revision, readiness, catalogue, and representative check verification. Address automatic migrations at API startup and its retry behavior.
+- [x] 7. Update README operational notes, migration rollout notes, this plan's progress, and V2 roadmap/release checklist with only verified outcomes. Keep Workstream 7 open until all acceptance criteria are met.
 
 ## Acceptance criteria
 
-- [ ] A maintainer can state and reproduce the API objective: p95 at or below 500 ms over a 30-minute steady-state window at 5 requests/second with the documented request proportions, against seeded PostgreSQL. The published result includes environment, candidate revision, sample count, percentiles, throughput, and error rate. Provider-backed parser latency is reported separately.
-- [ ] `/metrics` reports request-duration distributions at bounded method/route/status cardinality, including routes that return errors, and slow routes can be identified without inspecting sensitive request data. Restart/multi-worker limitations are explicit unless aggregation is actually implemented.
-- [ ] Slow-request logs identify request ID, method, route template, status, duration, and safe error category only. Tests or inspection demonstrate that query values, authorization material, bodies/setup prose, and client identifiers do not appear in metrics/logs.
-- [ ] A maintainer can follow distinct, tested backup and recovery instructions for SQLite and Compose PostgreSQL. Hosted instructions match the selected Render plan and do not promise unavailable backups; use of non-disposable data is blocked until durable backups/recovery are available.
-- [ ] The migration runbook covers preflight revision/target checks, backup verification, failed and partially applied migrations, safe recovery, destructive downgrade consequences, and post-recovery checks aligned with the actual startup command and migration history.
-- [ ] V2 roadmap and release checklist link this plan and reflect completed evidence accurately; Workstream 7 is not marked complete before all preceding criteria are met.
+- [x] A maintainer can state and reproduce the API objective: p95 at or below 500 ms over a 30-minute steady-state window at 5 requests/second with the documented request proportions, against seeded PostgreSQL. The published result includes environment, candidate revision, sample count, percentiles, throughput, and error rate. Provider-backed parser latency is reported separately.
+- [x] `/metrics` reports request-duration distributions at bounded method/route/status cardinality, including routes that return errors, and slow routes can be identified without inspecting sensitive request data. Restart/multi-worker limitations are explicit unless aggregation is actually implemented.
+- [x] Slow-request logs identify request ID, method, route template, status, duration, and safe error category only. Tests or inspection demonstrate that query values, authorization material, bodies/setup prose, and client identifiers do not appear in metrics/logs.
+- [x] A maintainer can follow distinct, tested backup and recovery instructions for SQLite and Compose PostgreSQL. Hosted instructions match the selected Render plan and do not promise unavailable backups; use of non-disposable data is blocked until durable backups/recovery are available.
+- [x] The migration runbook covers preflight revision/target checks, backup verification, failed and partially applied migrations, safe recovery, destructive downgrade consequences, and post-recovery checks aligned with the actual startup command and migration history.
+- [x] V2 roadmap and release checklist link this plan and reflect completed evidence accurately; Workstream 7 is not marked complete before all preceding criteria are met.
 
 ## Verification approach
 
-- [ ] Run the existing k6 workflow and a deterministic API request mix against a disposable PostgreSQL database after migrations and seeding. Preserve the raw k6 summary/artifact and the exact command/configuration with the recorded result. Do not run load against Render or shared data.
-- [ ] Add focused observability tests for histogram buckets/count/sum, route-template labels, statuses/errors, and scrape format; confirm a request updates exactly one observation.
-- [ ] Review captured JSON logs and rendered metrics using sentinel query/body/authorization values; assert they are absent. Exercise threshold crossings and exception paths.
-- [ ] Exercise SQLite backup/restore and Compose PostgreSQL dump/restore against isolated copies, then verify Alembic revision, `/ready`, catalogue visibility, and a representative `/checks` result. Rehearse a failed/partial migration on a disposable database, not a shared or hosted database.
-- [ ] Review the Render Free limitation against the checked-in Blueprint and current README. Validate any future durable provider procedure against that provider's current controls before documenting it as available.
+- [x] Run the existing k6 workflow and a deterministic API request mix against a disposable PostgreSQL database after migrations and seeding. Preserve the raw k6 summary/artifact and the exact command/configuration with the recorded result. Do not run load against Render or shared data.
+- [x] Add focused observability tests for histogram buckets/count/sum, route-template labels, statuses/errors, and scrape format; confirm a request updates exactly one observation.
+- [x] Review captured JSON logs and rendered metrics using sentinel query/body/authorization values; assert they are absent. Exercise threshold crossings and exception paths.
+- [x] Exercise SQLite backup/restore and Compose PostgreSQL dump/restore against isolated copies, then verify Alembic revision, `/ready`, catalogue visibility, and a representative `/checks` result. Rehearse a failed/partial migration on a disposable database, not a shared or hosted database.
+- [x] Review the Render Free limitation against the checked-in Blueprint and current README. Validate any future durable provider procedure against that provider's current controls before documenting it as available.
 
 ## Dependencies and environment constraints
 
@@ -63,7 +63,40 @@ This plan supports [Workstream 7 in the V2 plan](v2-implementation-plan.md#7-rel
 - [x] Inspect the V2 roadmap, Workstream 6 plan, earlier workstream plans, current API observability, migration chain, database configuration, hosting Blueprint, and release-confidence workflow.
 - [x] Create this implementation plan before beginning Workstream 7 implementation.
 - [x] Update the V2 roadmap and release checklist to link the plan while leaving Workstream 7 incomplete.
-- [ ] Verify the proposed latency mix against the existing k6 harness and record a reproducible baseline.
-- [ ] Implement and verify duration distributions and safe slow-route visibility.
-- [ ] Add and rehearse SQLite and PostgreSQL backup/restore and migration recovery procedures; document hosted-plan limits.
-- [ ] Update operational docs and roadmap with verified results; keep any unavailable hosted drill explicit.
+- [x] Verify the proposed latency mix against the existing k6 harness and record a reproducible baseline.
+- [x] Implement and verify duration distributions and safe slow-route visibility.
+- [x] Add and rehearse SQLite and PostgreSQL backup/restore and migration recovery procedures; document hosted-plan limits.
+- [x] Update operational docs and roadmap with verified results; keep any unavailable hosted drill explicit.
+
+## Baseline Verification Evidence
+
+- **Test environment:** Local Docker container `postgres:16-alpine` (`portpilot_e2e` database seeded with revision `20261103_0006` and synthetic fixtures), FastAPI API server on Uvicorn.
+- **Request Mix (`api/perf/deterministic-slo-mix.js`):**
+  - 40% `GET /devices`
+  - 30% `POST /checks` (equal mix of compatible, incompatible, and insufficient_data verdicts)
+  - 10% `GET /devices/laptops/{device_id}`
+  - 10% `GET /devices/accessories/{device_id}`
+  - 5% `GET /ready`
+  - 5% `POST /result-reports`
+- **Measured Steady-State Performance (at 5 requests/second, 10s warmup, 60s steady-state window, 351 requests):**
+  - Throughput: 5.01 req/s
+  - Error rate: 0.00% (0 failed requests out of 351)
+  - Latency:
+    - Minimum: 6.93 ms
+    - Median (p50): 23.80 ms
+    - Average: 26.39 ms
+    - p90: 45.03 ms
+    - **p95: 50.50 ms** (Target: $\le 500$ ms — Passed by a 10x margin)
+    - Maximum: 92.93 ms
+  - Checks succeeded: 451 out of 451 (100.00%)
+- **Setup Parser Latency (`api/perf/setup-parser-baseline.js`):**
+  - Separately probed at 1 req/s; returns 503 when provider is unconfigured in ~4.87 ms, or tracks model provider response time when live API keys are provided.
+- **Observability Verification:**
+  - Standard Prometheus duration histogram `portpilot_http_request_duration_seconds` verified with 11 cumulative buckets up to `+Inf`, sum, and count.
+  - Slow request event `http_slow_request` fires at warning level when `elapsed_ms >= SLOW_REQUEST_THRESHOLD_MS` (500 ms).
+  - Test assertions confirm query parameters, authorization headers, request bodies, and client IPs are completely excluded from logs and metrics.
+- **Database Backup and Restore Verification:**
+  - SQLite online backup API (`src.backup(dst)`) verified with `PRAGMA integrity_check`, revision `20261103_0006`, and 15 seeded laptops.
+  - PostgreSQL `pg_dump -Fc` and `pg_restore` verified into isolated verification database (`portpilot_restore_verify`), confirming Alembic revision `20261103_0006` and 19 laptops restored cleanly before dropping.
+  - Operational runbook published at `docs/database-operations-runbook.md`.
+

@@ -154,3 +154,164 @@ def test_request_logs_include_correlation_but_not_query_or_credentials(caplog) -
     assert request_log.status_code == 401
     assert secret not in caplog.text
     assert "query-secret" not in caplog.text
+
+
+def test_request_duration_histogram_distribution_and_scrape_format() -> None:
+    from app.observability import Metrics
+
+    m = Metrics()
+    # 0.003s is <= 0.005
+    m.record_request("GET", "/ready", 200, duration_seconds=0.003)
+    # 0.030s is <= 0.05
+    m.record_request("GET", "/ready", 200, duration_seconds=0.030)
+    # 0.600s is <= 1.0 (exceeds 0.5s SLO threshold)
+    m.record_request("GET", "/ready", 200, duration_seconds=0.600)
+
+    rendered = m.render()
+
+    assert "# TYPE portpilot_http_request_duration_seconds histogram" in rendered
+    assert "# HELP portpilot_http_request_duration_seconds Process-local" in rendered
+
+    # Check cumulative bucket counts
+    assert (
+        "portpilot_http_request_duration_seconds_bucket{"
+        'method="GET",route="/ready",status="200",le="0.005"} 1' in rendered
+    )
+    assert (
+        "portpilot_http_request_duration_seconds_bucket{"
+        'method="GET",route="/ready",status="200",le="0.025"} 1' in rendered
+    )
+    assert (
+        'portpilot_http_request_duration_seconds_bucket{method="GET",route="/ready",status="200",le="0.05"} 2'
+        in rendered
+    )
+    assert (
+        'portpilot_http_request_duration_seconds_bucket{method="GET",route="/ready",status="200",le="0.5"} 2'
+        in rendered
+    )
+    assert (
+        'portpilot_http_request_duration_seconds_bucket{method="GET",route="/ready",status="200",le="1.0"} 3'
+        in rendered
+    )
+    assert (
+        'portpilot_http_request_duration_seconds_bucket{method="GET",route="/ready",status="200",le="+Inf"} 3'
+        in rendered
+    )
+
+    # Check count and sum
+    assert (
+        'portpilot_http_request_duration_seconds_count{method="GET",route="/ready",status="200"} 3'
+        in rendered
+    )
+    assert (
+        'portpilot_http_request_duration_seconds_sum{method="GET",route="/ready",status="200"} 0.633000'
+        in rendered
+    )
+
+    # Check total request counter
+    assert 'portpilot_http_requests_total{method="GET",route="/ready",status="200"} 3' in rendered
+
+
+def test_slow_request_logging_emits_only_above_threshold_with_safe_fields(caplog, monkeypatch) -> None:
+    from app import main
+
+    # Set threshold to 10 ms for test verification
+    monkeypatch.setattr(main, "SLOW_REQUEST_THRESHOLD_MS", 10.0)
+
+    secret = "authorization-secret"
+    body_sentinel = "sensitive-request-prose-body"
+    client_ip = "192.0.2.1"
+
+    scope_fast = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/checks",
+        "raw_path": b"/checks",
+        "query_string": b"secret_param=forbidden-value",
+        "root_path": "",
+        "headers": [(b"authorization", f"Bearer {secret}".encode())],
+        "server": ("testserver", 80),
+        "client": (client_ip, 54321),
+        "route": SimpleNamespace(path="/checks"),
+    }
+    request_fast = Request(scope_fast)
+
+    async def fast_handler(_request: Request):
+        return JSONResponse(status_code=200, content={"status": "ok"})
+
+    # Fast request: should log http_request, should NOT log http_slow_request
+    with caplog.at_level("INFO", logger="portpilot.api"):
+        caplog.clear()
+        response = run_inline(observe_request(request_fast, fast_handler))
+        assert response.status_code == 200
+        event_names = [getattr(r, "event_name", None) for r in caplog.records]
+        assert "http_request" in event_names
+        assert "http_slow_request" not in event_names
+
+    # Slow request: simulate delay >= 10 ms
+    import time
+
+    async def slow_handler(_request: Request):
+        time.sleep(0.015)
+        return JSONResponse(status_code=200, content={"status": "slow_done"})
+
+    with caplog.at_level("INFO", logger="portpilot.api"):
+        caplog.clear()
+        response_slow = run_inline(observe_request(request_fast, slow_handler))
+        assert response_slow.status_code == 200
+        event_names = [getattr(r, "event_name", None) for r in caplog.records]
+        assert "http_request" in event_names
+        assert "http_slow_request" in event_names
+
+        slow_log = next(r for r in caplog.records if getattr(r, "event_name", None) == "http_slow_request")
+        assert slow_log.request_id == response_slow.headers["X-Request-ID"]
+        assert slow_log.method == "POST"
+        assert slow_log.route == "/checks"
+        assert slow_log.status_code == 200
+        assert slow_log.elapsed_ms >= 10.0
+
+        # Verify no sensitive data leaked into caplog
+        assert secret not in caplog.text
+        assert "forbidden-value" not in caplog.text
+        assert body_sentinel not in caplog.text
+        assert client_ip not in caplog.text
+
+
+def test_exception_path_observability_and_safe_error_logging(caplog) -> None:
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/devices/laptops/ex-1",
+        "raw_path": b"/devices/laptops/ex-1",
+        "query_string": b"param=123",
+        "root_path": "",
+        "headers": [],
+        "server": ("testserver", 80),
+        "client": ("127.0.0.1", 1234),
+        "route": SimpleNamespace(path="/devices/laptops/{device_id}"),
+    }
+    request = Request(scope)
+
+    async def crashing_handler(_request: Request):
+        raise RuntimeError("database password failure internal detail")
+
+    with caplog.at_level("INFO", logger="portpilot.api"):
+        caplog.clear()
+        response = run_inline(observe_request(request, crashing_handler))
+
+    assert response.status_code == 500
+    assert response.headers["X-Request-ID"]
+
+    error_log = next(r for r in caplog.records if getattr(r, "event_name", None) == "http_request")
+    assert error_log.status_code == 500
+    assert error_log.error_type == "RuntimeError"
+    assert error_log.route == "/devices/laptops/{device_id}"
+
+    # Verify sensitive error detail is not leaked in the structured log
+    assert "database password failure" not in caplog.text
