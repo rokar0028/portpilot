@@ -6,7 +6,7 @@ const setupFieldsOpened = new WeakSet<Page>();
 async function prepareCheck(page: Page) {
   await page.goto("/");
   await page
-    .getByLabel("Laptop", { exact: true })
+    .getByLabel("Your laptop", { exact: true })
     .selectOption("e2e-good-laptop");
   await page
     .getByRole("combobox", { name: /^Accessory/ })
@@ -78,7 +78,7 @@ test("discards an older response after a newer setup has completed", async ({
   await expect(checkButton).toBeDisabled();
   await expect(checkButton).toHaveText(/checking specifications/i);
 
-  await page.getByLabel("Laptop", { exact: true }).selectOption({
+  await page.getByLabel("Your laptop", { exact: true }).selectOption({
     value: "e2e-bad-laptop",
   });
   const secondResponseReceived = page.waitForResponse(

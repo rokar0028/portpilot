@@ -17,15 +17,15 @@ test("loads the verified catalogue in the production standalone frontend", async
   await expect(
     page.getByRole("heading", { name: /will your (gear|devices)/i }),
   ).toBeVisible();
-  await expect(page.getByLabel("Laptop", { exact: true })).toContainText(
+  await expect(page.getByLabel("Your laptop", { exact: true })).toContainText(
     "E2E Supported Laptop",
   );
   await expect(
     page.getByRole("combobox", { name: /^Accessory/ }),
   ).toContainText("E2E Supported Hub");
-  await expect(page.getByLabel("Laptop", { exact: true })).not.toContainText(
-    "E2E Unreviewed Laptop",
-  );
+  await expect(
+    page.getByLabel("Your laptop", { exact: true }),
+  ).not.toContainText("E2E Unreviewed Laptop");
   await expect(
     page.getByRole("combobox", { name: /^Accessory/ }),
   ).not.toContainText("E2E Unreviewed Hub");

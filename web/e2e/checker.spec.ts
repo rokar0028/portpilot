@@ -53,7 +53,7 @@ async function expectLaptopCharging(page: Page, charging: boolean) {
 
 async function chooseFixture(page: Page, laptop = "E2E Supported Laptop") {
   await page
-    .getByLabel("Laptop", { exact: true })
+    .getByLabel("Your laptop", { exact: true })
     .selectOption(laptopFixtureIds[laptop]);
   await page
     .getByRole("combobox", { name: /^Accessory/i })
@@ -237,9 +237,9 @@ test("copies a share URL and restores the setup in a fresh browser context", asy
   const sharedPage = await freshContext.newPage();
   await sharedPage.goto(sharedUrl);
   await openSetupFields(sharedPage);
-  await expect(sharedPage.getByLabel("Laptop", { exact: true })).toHaveValue(
-    "e2e-unknown-laptop",
-  );
+  await expect(
+    sharedPage.getByLabel("Your laptop", { exact: true }),
+  ).toHaveValue("e2e-unknown-laptop");
   await expect(sharedPage.getByLabel("Resolution")).toHaveValue("2560x1440");
   await expect(sharedPage.getByLabel("Refresh")).toHaveValue("30");
   await expectLaptopCharging(sharedPage, false);
@@ -311,7 +311,7 @@ test("keeps device selection and evidence readable at a narrow viewport", async 
   await page.goto("/");
   await chooseFixture(page);
   await page.getByText("See verified details").first().click();
-  await expect(page.getByLabel("Laptop", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Your laptop", { exact: true })).toBeVisible();
   await expect(page.getByText("Selected model code:").first()).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
@@ -336,7 +336,7 @@ test("shows a catalogue error and recovers when the API returns", async ({
   ).toBeVisible();
   await page.unroute(`${apiOrigin}/devices`);
   await page.reload();
-  await expect(page.getByLabel("Laptop", { exact: true })).toContainText(
+  await expect(page.getByLabel("Your laptop", { exact: true })).toContainText(
     "E2E Supported Laptop",
   );
   await expect(
