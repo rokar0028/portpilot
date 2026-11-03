@@ -1,5 +1,7 @@
 # Source review playbook
 
+This playbook guides reviewers and contributors when selecting manufacturer evidence, resolving conflicting specifications, rechecking stale sources, and recording catalogue corrections. It operationalizes Track 1 in [CONTRIBUTING.md](../CONTRIBUTING.md) and aligns with [Catalogue Identity and Evidence Standard](catalogue-identity-and-evidence.md).
+
 ## Selecting a source
 
 Prefer an official manufacturer manual, product specification page, support page, or region-specific manufacturer page. Verify that it identifies the exact model code, region, and hardware revision being reviewed. Record the URL, a short factual excerpt, capability key, and checked date for every populated capability. Use retailer and community sources only as leads; they do not establish a published capability.

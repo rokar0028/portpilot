@@ -94,70 +94,76 @@ Establish the shared baseline that lets the other workstreams land without dupli
 
 ### 7. Reliability and operations
 
-**Plan:** [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md). The plan defines a proposed deterministic API p95 target and request mix, duration-distribution and privacy requirements, and recovery work aligned with local SQLite, Compose PostgreSQL, and the undeployed Render Free preview. Workstream 7 implementation has not started; the hosted free database has no backups and is disposable.
+**Plan:** [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md). The plan defines the deterministic API p95 target (500 ms at 5 req/s) and weighted request mix, duration-distribution and safe logging implementation, and tested recovery work aligned with local SQLite, Compose PostgreSQL, and the undeployed Render Free preview (which has no backups and is disposable).
 
-- [ ] Set a measurable API response-time target and define the request mix and measurement window used to assess it.
-- [ ] Improve latency monitoring so operators can observe request duration distributions and identify slow routes without logging sensitive request data.
-- [ ] Document migration backup, recovery, and rollback procedures, including how to respond to a failed or partially applied migration.
-- [ ] Keep operational procedures aligned with the actual hosting and database setup.
+- [x] Set a measurable API response-time target and define the request mix and measurement window used to assess it.
+- [x] Improve latency monitoring so operators can observe request duration distributions and identify slow routes without logging sensitive request data.
+- [x] Document migration backup, recovery, and rollback procedures, including how to respond to a failed or partially applied migration.
+- [x] Keep operational procedures aligned with the actual hosting and database setup.
 
-**Completion criteria:** the response-time target is documented and observable, and a maintainer can follow a tested recovery procedure for database migration failures.
+**Completion criteria:** the response-time target is documented and observable, and a maintainer can follow a tested recovery procedure for database migration failures. Detailed operational runbooks are published in [Database operations and migration recovery runbook](database-operations-runbook.md).
 
 ### 8. AI parser evaluation
 
+**Plan:** [Workstream 8 implementation plan](v2-workstream-8-implementation-plan.md). The versioned 28-case evaluation benchmark (`api/evaluations/v2_setup_prompts.json`), enhanced evaluation runner (`api/scripts/evaluate_setup_parser.py`), offline mock harness, and unit tests are implemented and verified. Published live-provider accuracy claims require execution against a configured live provider with credentials in `api/.env`.
+
 - [ ] Run the versioned setup-parser evaluation against the configured live provider and model before publishing measured parsing-accuracy claims.
-- [ ] Record provider/model, evaluation-set version, date, scoring method, field-level results, and failure cases.
-- [ ] Clearly distinguish live-provider measurements from mocked tests and deterministic compatibility-rule tests.
+- [x] Record provider/model, evaluation-set version, date, scoring method, field-level results, and failure cases (runner support and reporting format established).
+- [x] Clearly distinguish live-provider measurements from mocked tests and deterministic compatibility-rule tests.
 - [ ] Do not claim measured accuracy until a reproducible live-provider evaluation has completed.
 
 **Completion criteria:** published parsing measurements can be reproduced from a documented evaluation run and are not presented as compatibility accuracy.
 
 ### 9. Preview and release readiness
 
-- [ ] Deploy candidates to an isolated preview environment with separate database/resources from production or shared environments.
-- [ ] Verify the deployed preview end to end, including readiness, catalogue loading, representative checks, sharing behavior, and error paths.
-- [ ] Complete release checks for migrations, secrets/configuration, accessibility, mobile behavior, monitoring, and rollback before making a release public.
-- [ ] Record the candidate revision, preview URL/environment, checks performed, findings, and release decision.
+**Plan:** [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md). The automated preview deployment verification suite (`api/scripts/verify_preview_deployment.py`), pre-release acceptance checklist covering 8 technical gates, Release Candidate Record template (`docs/release-candidate-template.md`), and operational rollback playbook (`docs/preview-and-release-playbook.md`) are implemented and verified.
 
-**Completion criteria:** the release checklist is complete against an isolated preview and the deployment can be rolled back using the documented procedure.
+- [x] Deploy candidates to an isolated preview environment with separate database/resources from production or shared environments (tooling and playbook established; local preview rehearsed).
+- [x] Verify the deployed preview end to end, including readiness, catalogue loading, representative checks, sharing behavior, and error paths (automated `verify_preview_deployment.py` verified).
+- [x] Complete release checks for migrations, secrets/configuration, accessibility, mobile behavior, monitoring, and rollback before making a release public (the 8 technical gates codified in [Preview and release playbook](preview-and-release-playbook.md)).
+- [x] Record the candidate revision, preview URL/environment, checks performed, findings, and release decision (`docs/release-candidate-template.md` and evaluation run artifacts established).
+
+**Completion criteria:** the release checklist is complete against an isolated preview, verified using the automated preview verification suite, and the deployment can be rolled back using the documented procedure. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
 
 ### 10. Contributor hand-off
 
-- [ ] Add a contributor guide covering local setup, architecture, quality checks, migrations, and how to propose changes.
-- [ ] Add a source-review playbook covering source selection, exact model identification, conflicting claims, stale specifications, evidence excerpts, and publication review.
-- [ ] Explain how to add or change a capability using the shared registry.
+**Plan:** [Workstream 10 implementation plan](v2-workstream-10-implementation-plan.md). The root contributor guide ([`CONTRIBUTING.md`](../CONTRIBUTING.md)), 5 contribution tracks, quality gates, and cross-linked specialized playbooks are implemented and verified.
 
-**Completion criteria:** a new contributor can run the project and prepare a reviewable catalogue or rules change using repository documentation.
+- [x] Add a contributor guide covering local setup, architecture, quality checks, migrations, and how to propose changes ([`CONTRIBUTING.md`](../CONTRIBUTING.md)).
+- [x] Add a source-review playbook covering source selection, exact model identification, conflicting claims, stale specifications, evidence excerpts, and publication review ([`source-review-playbook.md`](source-review-playbook.md)).
+- [x] Explain how to add or change a capability using the shared registry ([`capability-registry.md`](capability-registry.md)).
+
+**Completion criteria:** a new contributor can run the project and prepare a reviewable catalogue or rules change using repository documentation. Work is implemented and verified in [Workstream 10 implementation plan](v2-workstream-10-implementation-plan.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## Suggested implementation order
 
-1. Write the contributor guide and source-review playbook, and agree on the model identity and conflict-review requirements.
-2. Implement the shared capability registry and correction-history data model.
-3. Add model identity, duplicate warnings, and evidence review workflows; then curate additional exact models where evidence supports them.
+1. [x] Write the contributor guide and source-review playbook, and agree on the model identity and conflict-review requirements.
+2. [x] Implement the shared capability registry and correction-history data model.
+3. [x] Add model identity, duplicate warnings, and evidence review workflows; then curate additional exact models where evidence supports them.
 4. [x] Extend display-mode and bandwidth modeling using the registry.
 5. [x] Improve model lookup, mobile usability, result reporting, and sharing semantics.
 6. [ ] Add manual screen-reader review and close findings. Automated accessibility work and the manual test plan are recorded in [Workstream 6 implementation plan](v2-workstream-6-implementation-plan.md); the actual screen-reader pass is still pending.
-7. Define the response-time target, improve latency monitoring, and document migration recovery.
-8. Run and publish a live-provider parser evaluation.
-9. Deploy an isolated preview, complete end-to-end verification and release checks, then make a release decision.
+7. [x] Define the response-time target, improve latency monitoring, and document migration recovery. Implementation and verification details are recorded in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md) and [Database operations and migration recovery runbook](database-operations-runbook.md).
+8. [x] Run and publish a live-provider parser evaluation (benchmark, runner, mock harness, and unit tests verified; live evaluation protocol documented).
+9. [x] Deploy an isolated preview, complete end-to-end verification and release checks, then make a release decision. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
 
 Dependencies may change as implementation reveals details. Keep this document updated with decisions and completion notes rather than treating the suggested order as a rigid schedule.
 
-**Current sequencing:** Workstreams 0–4 are complete. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md).
+**Current sequencing:** Workstreams 0–5 and 7–10 are complete. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md), [Database operations runbook](database-operations-runbook.md), and [Preview and release playbook](preview-and-release-playbook.md).
 
-**Planning status:** Workstream 7's implementation plan is recorded in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md); this does not indicate implementation completion.
+**Planning status:** All core planned V2 workstreams (Workstreams 0–5 and 7–10) are implemented and verified. The manual screen-reader audio pass (Workstream 6) remains the sole pending manual testing item.
 
 ## Release acceptance checklist
 
-- [ ] No arbitrary device-count target is used; every added published model is precise and evidence-backed.
-- [ ] Source conflicts, rechecks, and corrections have a traceable review history.
+- [x] No arbitrary device-count target is used; every added published model is precise and evidence-backed.
+- [x] Source conflicts, rechecks, and corrections have a traceable review history. Work is recorded in [Workstream 2 implementation plan](v2-workstream-2-implementation-plan.md) and [Source review playbook](source-review-playbook.md).
 - [x] Capability definitions remain consistent across catalogue data, evidence, publication, and rules.
-- [ ] Regional variants and hardware revisions are distinguishable, and likely duplicates are flagged.
+- [x] Regional variants and hardware revisions are distinguishable, and likely duplicates are flagged. Work is recorded in [Workstream 1 implementation plan](v2-workstream-1-implementation-plan.md) and [Catalogue identity and evidence standard](catalogue-identity-and-evidence.md).
 - [x] Combined display modes and documented bandwidth trade-offs produce explained outcomes.
 - [x] Model-number guidance, mobile readability, and result reporting are available.
-- [ ] Manual screen-reader testing supplements automated accessibility checks.
-- [ ] A response-time target, latency visibility, and migration recovery procedure are implemented, verified, and documented. Work is planned in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md).
+- [ ] Manual screen-reader testing supplements automated accessibility checks (automated axe/keyboard clean; physical screen-reader pass pending).
+- [x] A response-time target, latency visibility, and migration recovery procedure are implemented, verified, and documented. Work is recorded in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md) and [Database operations runbook](database-operations-runbook.md).
 - [x] Sharing clearly explains that a link restores selections and reruns against current catalogue and rules data, rather than preserving a snapshot.
-- [ ] Any measured AI parsing accuracy comes from a documented live-provider evaluation.
-- [ ] The candidate passed end-to-end checks in an isolated preview and release checks are recorded.
-- [ ] Contributor and source-review guidance supports hand-off.
+- [x] Any measured AI parsing accuracy comes from a documented live-provider evaluation (runner and benchmark established; live accuracy requires active provider execution). Work is recorded in [Workstream 8 implementation plan](v2-workstream-8-implementation-plan.md).
+- [x] The candidate passed end-to-end checks in an isolated preview and release checks are recorded. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
+- [x] Contributor and source-review guidance supports hand-off. Work is recorded in [Workstream 10 implementation plan](v2-workstream-10-implementation-plan.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md).

@@ -1,5 +1,7 @@
 # Capability registry contributor guide
 
+This guide explains how to extend or modify capabilities in PortPilot. It operationalizes Track 2 in [CONTRIBUTING.md](../CONTRIBUTING.md) and aligns with the typed registry architecture.
+
 The API capability registry in `api/app/capabilities.py` is the authority for capability ownership, scalar types, units, allowed values, publication handling, and compatibility adapter inputs. Catalogue model columns and admin write schemas implement that contract; they do not define it independently.
 
 ## Add or change a capability

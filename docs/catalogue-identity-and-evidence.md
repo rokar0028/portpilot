@@ -1,5 +1,7 @@
 # Catalogue identity and evidence standard
 
+This standard defines the requirements for model identification, regional variants, hardware revisions, and manufacturer evidence thresholds. It operationalizes Track 1 in [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Identity fields
 
 - `brand` and `name` provide the readable identity.
