@@ -62,13 +62,22 @@ def _identity_warnings(
         code = _normalize_identity(payload.model_code)
         candidate_code = _normalize_identity(candidate.model_code)
         if code and candidate_code and code == candidate_code:
-            if _normalize_identity(payload.region_variant) != _normalize_identity(candidate.region_variant):
+            diff_region = _normalize_identity(payload.region_variant) != _normalize_identity(
+                candidate.region_variant
+            )
+            diff_revision = _normalize_identity(payload.hardware_revision) != _normalize_identity(
+                candidate.hardware_revision
+            )
+            if diff_region and diff_revision:
+                reasons.append(
+                    "same normalized manufacturer model code; regional variant and hardware revision "
+                    "differ or are unknown"
+                )
+            elif diff_region:
                 reasons.append(
                     "same normalized manufacturer model code; regional variant differs or is unknown"
                 )
-            elif _normalize_identity(payload.hardware_revision) != _normalize_identity(
-                candidate.hardware_revision
-            ):
+            elif diff_revision:
                 reasons.append(
                     "same normalized manufacturer model code; hardware revision differs or is unknown"
                 )
@@ -192,7 +201,7 @@ def _capture_corrections(
     actor: str,
 ) -> None:
     changes: list[tuple[str, object, object, list[str]]] = []
-    values = payload.model_dump(exclude={"id", "evidence", "change_reason", "review_status"})
+    values = payload.model_dump(exclude={"id", "evidence", "change_reason"})
     for key, new_value in values.items():
         old_value = getattr(record, key)
         if old_value != new_value:
@@ -334,9 +343,9 @@ def create_evidence_conflict(
         created_at=datetime.now(UTC),
     )
     device.review_status = "needs_review"
-    evidence = next((row for row in device.evidence if row.capability_key == payload.capability_key), None)
-    if evidence:
-        evidence.review_status = "needs_review"
+    for row in device.evidence:
+        if row.capability_key == payload.capability_key:
+            row.review_status = "needs_review"
     session.add(record)
     session.commit()
     return _conflict_read(record)

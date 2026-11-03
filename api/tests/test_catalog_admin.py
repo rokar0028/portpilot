@@ -349,3 +349,98 @@ def test_unreviewed_laptop_cannot_be_used_for_a_compatibility_check(session: Ses
 
     assert error.value.status_code == 404
     assert error.value.detail["code"] == "laptop_not_found"
+
+
+def test_review_status_change_creates_correction_record(session: Session) -> None:
+    laptop = create_laptop(verified_laptop(), session)
+    updated = update_laptop(
+        laptop.id,
+        LaptopWrite(
+            id=laptop.id,
+            brand=laptop.brand,
+            name=laptop.name,
+            model_code=laptop.model_code,
+            usb_c_port_count=laptop.usb_c_port_count,
+            review_status="needs_review",
+            change_reason="Holding device for review pending new manufacturer evidence.",
+            evidence=[
+                evidence("model_code", "needs_review"),
+                evidence("usb_c_port_count", "needs_review"),
+            ],
+        ),
+        session,
+    )
+    assert updated.review_status == "needs_review"
+    corrections = list_corrections("laptop", laptop.id, session)
+    keys = {c.capability_key for c in corrections}
+    assert "review_status" in keys
+
+
+def test_conflict_marks_all_matching_evidence_as_needs_review(session: Session) -> None:
+    laptop = create_laptop(
+        verified_laptop(
+            evidence=[
+                evidence("model_code"),
+                evidence("usb_c_port_count"),
+                {
+                    "id": "second-port-evidence",
+                    "capability_key": "usb_c_port_count",
+                    "title": "Secondary spec sheet",
+                    "url": "https://example.com/spec-v2",
+                    "excerpt": "Secondary spec sheet documents 1 USB-C port.",
+                    "checked_on": date(2026, 11, 2),
+                    "status": "verified",
+                },
+            ]
+        ),
+        session,
+    )
+    assert len(laptop.evidence) == 3
+    create_evidence_conflict(
+        EvidenceConflictWrite(
+            entity_type="laptop",
+            device_id=laptop.id,
+            capability_key="usb_c_port_count",
+            claim_a_value="1",
+            claim_a_url="https://example.com/a",
+            claim_a_quality="manufacturer_primary",
+            claim_b_value="2",
+            claim_b_url="https://example.com/b",
+            claim_b_quality="manufacturer_secondary",
+        ),
+        session,
+    )
+    reloaded = session.get(LaptopModel, laptop.id)
+    port_evidences = [ev for ev in reloaded.evidence if ev.capability_key == "usb_c_port_count"]
+    assert len(port_evidences) == 2
+    assert all(ev.review_status == "needs_review" for ev in port_evidences)
+
+
+def test_identity_warnings_reports_both_region_and_revision_mismatch(session: Session) -> None:
+    create_laptop(
+        LaptopWrite(
+            id="base-laptop",
+            brand="Example",
+            name="Example Pro",
+            model_code="EX-100",
+            region_variant="US",
+            hardware_revision="RevA",
+            review_status="draft",
+        ),
+        session,
+    )
+    created = create_laptop(
+        LaptopWrite(
+            id="variant-laptop",
+            brand="Example",
+            name="Example Pro Variant",
+            model_code="EX-100",
+            region_variant="EU",
+            hardware_revision="RevB",
+            review_status="draft",
+        ),
+        session,
+    )
+    assert created.identity_warnings
+    warning_reason = created.identity_warnings[0].reasons[0]
+    assert "regional variant and hardware revision differ or are unknown" in warning_reason
