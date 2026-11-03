@@ -41,12 +41,13 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "node .next-e2e/standalone/server.js",
+      command: "node node_modules/next/dist/bin/next start",
       url: webUrl,
       reuseExistingServer: false,
       timeout: 60_000,
       env: {
         ...process.env,
+        PORTPILOT_E2E_DIST_DIR: ".next-e2e",
         HOSTNAME: "127.0.0.1",
         PORT: new URL(webUrl).port,
       },

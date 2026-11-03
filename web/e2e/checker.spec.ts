@@ -270,6 +270,55 @@ test("provides a clipboard fallback when browser clipboard access fails", async 
   );
 });
 
+test("submits a low-data report with deterministic result context", async ({
+  page,
+}) => {
+  let submitted: Record<string, unknown> | undefined;
+  await page.route(`${apiOrigin}/result-reports`, async (route) => {
+    submitted = route.request().postDataJSON();
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ id: "report-test", status: "received" }),
+    });
+  });
+  await page.goto("/");
+  await submitSupportedCheck(page);
+  await page.getByText("Think this result is wrong? Report it").click();
+  await page
+    .getByLabel("What seems wrong? (optional)")
+    .fill("The display result seems incorrect.");
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Thanks. Your report was sent to the PortPilot team.",
+  );
+  expect(submitted).toMatchObject({
+    laptop_id: "e2e-good-laptop",
+    accessory_id: "e2e-good-hub",
+    verdict: "compatible",
+    rule_engine_version: "0.3.0",
+    note: "The display result seems incorrect.",
+  });
+  expect(submitted).not.toHaveProperty("user_agent");
+  expect(submitted).not.toHaveProperty("serial_number");
+  expect(submitted).not.toHaveProperty("reply_email");
+});
+
+test("keeps device selection and evidence readable at a narrow viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await chooseFixture(page);
+  await page.getByText("See verified details").first().click();
+  await expect(page.getByLabel("Laptop", { exact: true })).toBeVisible();
+  await expect(page.getByText("Selected model code:").first()).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth,
+  );
+  expect(overflow).toBe(false);
+});
+
 test("shows a catalogue error and recovers when the API returns", async ({
   page,
 }) => {

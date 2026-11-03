@@ -97,6 +97,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [shareMessage, setShareMessage] = useState("");
+  const [reportNote, setReportNote] = useState("");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   function updateLaptopId(value: string) {
     checkRequestVersion.current += 1;
@@ -310,9 +313,58 @@ export default function Home() {
   const selectedAccessory = catalog?.accessories.find(
     (item) => item.id === accessoryId,
   );
+  const resultHeading = result
+    ? result.verdict === "compatible"
+      ? "Looks compatible"
+      : result.verdict === "compatible_with_limits"
+        ? "Works with limits"
+        : result.verdict === "incompatible"
+          ? "Doesn’t meet this setup"
+          : "Not enough information"
+    : "";
+  const announcement = loading
+    ? "Checking your setup. Comparing your devices with their published specifications."
+    : parsing
+      ? "Interpreting your setup description."
+      : parsedSetup && !parsedSetupReviewed
+        ? "Setup interpreted. Review the extracted requirements and confirm them before checking."
+        : result
+          ? `Check complete. ${resultHeading}. ${result.summary}`
+          : "";
 
   function sourceCount(evidence: Evidence[]) {
     return new Set(evidence.map((source) => source.url)).size;
+  }
+
+  async function submitResultReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!result) return;
+    setReporting(true);
+    setReportMessage("");
+    try {
+      const response = await fetch(`${API}/result-reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          laptop_id: laptopId,
+          accessory_id: accessoryId,
+          setup,
+          verdict: result.verdict,
+          rule_engine_version: result.rule_engine_version,
+          note: reportNote,
+        }),
+      });
+      if (!response.ok)
+        throw new Error("Report could not be sent. Please try again.");
+      setReportMessage("Thanks. Your report was sent to the PortPilot team.");
+      setReportNote("");
+    } catch (cause) {
+      setReportMessage(
+        cause instanceof Error ? cause.message : "Report could not be sent.",
+      );
+    } finally {
+      setReporting(false);
+    }
   }
 
   function groupEvidence(evidence: Evidence[]) {
@@ -466,6 +518,32 @@ export default function Home() {
               See supported devices and model-code tips.
             </Link>
           </p>
+          <details className="model-help">
+            <summary>Where can I find my exact laptop model?</summary>
+            <p>
+              Check the label on the underside or inside the battery/service
+              compartment, or the original box. Look for “Model”, “Product”, or
+              “MTM”; serial numbers are not needed.
+            </p>
+            <ul>
+              <li>
+                <strong>Windows:</strong> Settings → System → About, or run{" "}
+                <code>msinfo32</code> and read System Model.
+              </li>
+              <li>
+                <strong>macOS:</strong> Apple menu → About This Mac. For a model
+                identifier, open System Information → Hardware.
+              </li>
+              <li>
+                <strong>ChromeOS:</strong> Settings → About ChromeOS →
+                Diagnostics, or check the label on the device.
+              </li>
+            </ul>
+            <p>
+              Match the full model code on the manufacturer support page. Don’t
+              share a serial number.
+            </p>
+          </details>
 
           <div className="connector">
             <span />
@@ -581,7 +659,7 @@ export default function Home() {
                   {parsing ? "Interpreting setup…" : "Interpret setup"}
                 </button>
                 {parsedSetup && (
-                  <div className="parse-review" role="status">
+                  <div className="parse-review">
                     <strong>
                       Review these extracted fields and correct them below.
                     </strong>
@@ -750,6 +828,11 @@ export default function Home() {
               >
                 Try again
               </button>
+              <p className="share-explainer">
+                This link restores your selections and reruns the check using
+                the current catalogue and rules. It does not save this result as
+                a snapshot.
+              </p>
             </div>
           )}
           {!catalogError && (
@@ -792,9 +875,17 @@ export default function Home() {
           </p>
         </form>
 
-        <aside className="result-panel" id="result-panel" aria-live="polite">
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {announcement}
+        </div>
+        <aside className="result-panel" id="result-panel">
           {loading ? (
-            <div className="checking-result" role="status">
+            <div className="checking-result">
               <span className="loading-spinner" aria-hidden="true" />
               <h2>Checking your setup</h2>
               <p>Comparing your devices with their published specifications…</p>
@@ -835,15 +926,7 @@ export default function Home() {
                     ? "×"
                     : "?"}
               </div>
-              <h2 className="verdict-title">
-                {result.verdict === "compatible"
-                  ? "Looks compatible"
-                  : result.verdict === "compatible_with_limits"
-                    ? "Works with limits"
-                    : result.verdict === "incompatible"
-                      ? "Doesn’t meet this setup"
-                      : "Not enough information"}
-              </h2>
+              <h2 className="verdict-title">{resultHeading}</h2>
               <p className="verdict-summary">{result.summary}</p>
               {result.verdict === "insufficient_data" && (
                 <p className="result-caveat">
@@ -925,6 +1008,32 @@ export default function Home() {
                   </details>
                 ))}
               </div>
+              <details className="result-report">
+                <summary>Think this result is wrong? Report it</summary>
+                <p>
+                  We’ll send the selected models, requested setup, verdict,
+                  rules version, and your optional note. We don’t include serial
+                  numbers, contact details, browsing data, or setup
+                  descriptions. Please don’t include personal or secret
+                  information in the note.
+                </p>
+                <form onSubmit={submitResultReport}>
+                  <label htmlFor="report-note">
+                    What seems wrong? (optional)
+                  </label>
+                  <textarea
+                    id="report-note"
+                    maxLength={1000}
+                    value={reportNote}
+                    onChange={(event) => setReportNote(event.target.value)}
+                    rows={3}
+                  />
+                  <button type="submit" disabled={reporting}>
+                    {reporting ? "Sending…" : "Send report"}
+                  </button>
+                  {reportMessage && <p role="status">{reportMessage}</p>}
+                </form>
+              </details>
             </div>
           )}
         </aside>

@@ -16,15 +16,4 @@ const build = spawnSync(process.execPath, [nextCli, "build"], {
   stdio: "inherit",
 });
 
-if (build.status !== 0) process.exit(build.status ?? 1);
-
-const prepare = spawnSync(
-  process.execPath,
-  ["scripts/prepare-standalone.mjs"],
-  {
-    cwd: projectRoot,
-    env,
-    stdio: "inherit",
-  },
-);
-process.exit(prepare.status ?? 1);
+process.exit(build.status ?? 1);
