@@ -12,7 +12,7 @@ const setupFieldsOpened = new WeakSet<Page>();
 
 async function openSetupFields(page: Page) {
   if (setupFieldsOpened.has(page)) return;
-  const setupDisclosure = page.getByText("Change setup (optional)", {
+  const setupDisclosure = page.getByText("Adjust screen or charging needs", {
     exact: true,
   });
   if (await setupDisclosure.count()) await setupDisclosure.click();
@@ -56,7 +56,7 @@ async function chooseFixture(page: Page, laptop = "E2E Supported Laptop") {
     .getByLabel("Your laptop", { exact: true })
     .selectOption(laptopFixtureIds[laptop]);
   await page
-    .getByRole("combobox", { name: /^Accessory/i })
+    .getByRole("combobox", { name: "Connect a dock, hub or charger" })
     .selectOption("e2e-good-hub");
 }
 
@@ -88,9 +88,11 @@ async function changeSelect(page: Page, label: string) {
 
   const control =
     label === "Laptop"
-      ? page.getByLabel(label, { exact: true })
+      ? page.getByLabel("Your laptop", { exact: true })
       : label === "Accessory"
-        ? page.getByRole("combobox", { name: /^Accessory/i })
+        ? page.getByRole("combobox", {
+            name: "Connect a dock, hub or charger",
+          })
         : label === "External displays"
           ? page.getByRole("combobox", {
               name: /^External (displays|screens)/i,
@@ -132,10 +134,11 @@ test("shows a supported result with requirements, limits, and verified evidence"
     page.getByRole("list", { name: "Known limitations" }),
   ).toHaveCount(0);
   await expect(page.getByText("SPECIFICATION SOURCES")).toBeVisible();
+  await page
+    .getByText("Synthetic E2E manufacturer specification", { exact: true })
+    .click();
   await expect(
-    page.getByRole("link", {
-      name: /Synthetic E2E manufacturer specification/,
-    }),
+    page.getByRole("link", { name: /Synthetic E2E fixture documents/ }),
   ).toHaveCount(6);
 });
 
@@ -222,7 +225,7 @@ test("copies a share URL and restores the setup in a fresh browser context", asy
   expect(sharedUrl).toContain("laptop=e2e-unknown-laptop");
 
   await page.getByRole("button", { name: /share this result/i }).click();
-  await expect(page.getByRole("status")).toHaveText("Link copied");
+  await expect(page.locator(".share-message")).toHaveText("Link copied");
   await expect
     .poll(async () =>
       page.evaluate(
@@ -265,7 +268,7 @@ test("provides a clipboard fallback when browser clipboard access fails", async 
   await page.goto("/");
   await submitSupportedCheck(page);
   await page.getByRole("button", { name: /share this result/i }).click();
-  await expect(page.getByRole("status")).toHaveText(
+  await expect(page.locator(".share-message")).toHaveText(
     "Copy the link from your address bar",
   );
 });
@@ -289,7 +292,7 @@ test("submits a low-data report with deterministic result context", async ({
     .getByLabel("What seems wrong? (optional)")
     .fill("The display result seems incorrect.");
   await page.getByRole("button", { name: "Send report" }).click();
-  await expect(page.getByRole("status")).toHaveText(
+  await expect(page.locator(".result-report").getByRole("status")).toHaveText(
     "Thanks. Your report was sent to the PortPilot team.",
   );
   expect(submitted).toMatchObject({

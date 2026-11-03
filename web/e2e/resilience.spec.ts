@@ -9,10 +9,10 @@ async function prepareCheck(page: Page) {
     .getByLabel("Your laptop", { exact: true })
     .selectOption("e2e-good-laptop");
   await page
-    .getByRole("combobox", { name: /^Accessory/ })
+    .getByRole("combobox", { name: "Connect a dock, hub or charger" })
     .selectOption("e2e-good-hub");
   if (!setupFieldsOpened.has(page)) {
-    const setupDisclosure = page.getByText("Change setup (optional)", {
+    const setupDisclosure = page.getByText("Adjust screen or charging needs", {
       exact: true,
     });
     if (await setupDisclosure.count()) await setupDisclosure.click();

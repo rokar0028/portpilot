@@ -21,13 +21,13 @@ test("loads the verified catalogue in the production standalone frontend", async
     "E2E Supported Laptop",
   );
   await expect(
-    page.getByRole("combobox", { name: /^Accessory/ }),
+    page.getByRole("combobox", { name: "Connect a dock, hub or charger" }),
   ).toContainText("E2E Supported Hub");
   await expect(
     page.getByLabel("Your laptop", { exact: true }),
   ).not.toContainText("E2E Unreviewed Laptop");
   await expect(
-    page.getByRole("combobox", { name: /^Accessory/ }),
+    page.getByRole("combobox", { name: "Connect a dock, hub or charger" }),
   ).not.toContainText("E2E Unreviewed Hub");
   expect(pageErrors).toEqual([]);
   expect(failedApiRequests).toEqual([]);

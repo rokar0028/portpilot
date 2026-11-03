@@ -59,6 +59,7 @@ def laptop_payload(device_id: str, *, review_status: str = "verified", suffix: s
         "model_code": f"{device_id}-model",
         "usb_c_port_count": 1,
         "review_status": review_status,
+        "change_reason": "Verified the synthetic test record against its fixture source.",
         "evidence": [
             {
                 "id": f"{device_id}:{suffix}:model",
