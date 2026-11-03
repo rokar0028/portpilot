@@ -8,11 +8,25 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 - Accessory: Anker 364 USB-C Hub (10-in-1, Dual 4K HDMI)
 - Setup: one 1080p external display plus laptop charging
 
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery on the laptop, and HDMI plus up to 85 W pass-through on the hub. They do not establish every requirement for this setup, so PortPilot deliberately reports **Insufficient data** rather than guessing. The API catalogue is database-backed and currently publishes 15 laptops and 14 accessories; one accessory is held for model-identity review.
+The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery on the laptop, and HDMI plus up to 85 W pass-through on the hub. They do not establish every requirement for this setup, so PortPilot deliberately reports **Insufficient data** rather than guessing. The API catalogue is database-backed and currently publishes 15 laptops and 13 accessories; two accessories are held for model-identity review.
 
-The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check when opened. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt.
+The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check using the current catalogue and rules; the URL does not preserve the original result as a snapshot. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 
 The [coverage and limitations page](/coverage) reports live verified catalogue counts and explains how PortPilot handles manufacturer evidence and unknown specifications.
+
+## Implementation plans
+
+- [PortPilot implementation plan](docs/portpilot-implementation-plan.md) — product scope and original implementation direction.
+- [V2 implementation plan](docs/v2-implementation-plan.md) — follow-on workstreams and V2 release acceptance criteria.
+- [Workstream 1 implementation plan](docs/v2-workstream-1-implementation-plan.md) — device identity, duplicate review, and evidence threshold.
+- [Workstream 2 implementation plan](docs/v2-workstream-2-implementation-plan.md) — evidence conflicts, rechecks, and correction history.
+- [Workstream 3 implementation plan](docs/v2-workstream-3-implementation-plan.md) — capability registry integration and consistency checks.
+- [Workstream 5 implementation plan](docs/v2-workstream-5-implementation-plan.md) — model-finding help, mobile readability, low-data reporting, and sharing behavior.
+- [Capability registry contributor guide](docs/capability-registry.md) — how to add a capability across catalogue, evidence, publication, and rules.
+- [V2 migration and rollout notes](docs/v2-migration-rollout.md) — revision history, data impact, rollout, and rollback guidance.
+- [Source-review playbook](docs/source-review-playbook.md) — review, recheck, and correction process.
+- [Catalogue identity and evidence standard](docs/catalogue-identity-and-evidence.md) — contributor guidance for exact device identity and publication.
+- [Phase 0 implementation plan](docs/implementation%20plan.md) — initial scope and vertical-slice decisions.
 
 ## Prerequisites
 
@@ -153,7 +167,7 @@ flowchart LR
 - The Python rules engine calculates every verdict. It does not infer device specifications; missing required values produce **Insufficient data**.
 - Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow and protected admin API require evidence for populated published fields.
 - PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
-- The verified catalogue currently contains 15 laptops and 14 accessories: USB-C hubs and USB-C chargers. One accessory remains in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
+- The verified catalogue currently contains 15 laptops and 13 accessories: USB-C hubs and USB-C chargers. Two accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
 - The evaluator test file defines 52 distinct scenarios when parameterized inputs are counted. The API suite passes 75 tests; API lint/format, frontend lint/format, and the production build also pass.
 
 The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Phase 6 evidence review, desktop/mobile browser checks, and quality checks are complete.
