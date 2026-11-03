@@ -3,7 +3,7 @@ from typing import Any
 
 from .schemas import CheckRequest
 
-RULE_ENGINE_VERSION = "0.2.0"
+RULE_ENGINE_VERSION = "0.3.0"
 
 
 def _mode_at_least(
@@ -34,6 +34,41 @@ def _mode_at_least(
     return requested[0] <= maximum[0] and requested[1] <= maximum[1] and requested_refresh <= maximum_refresh
 
 
+def _configuration_match(
+    configurations: list[dict[str, Any]] | None, requested: list[Any], topology: str | None
+) -> bool | None:
+    """Match only a manufacturer-documented simultaneous display configuration."""
+    if not configurations:
+        return None
+
+    def key(mode: Any) -> tuple[str, int, str | None]:
+        if isinstance(mode, dict):
+            resolution, refresh = mode.get("resolution"), mode.get("refresh_rate_hz")
+            connection = mode.get("connection")
+        else:
+            resolution, refresh = mode.resolution, mode.refresh_rate_hz
+            connection = mode.connection
+        normalized = str(resolution).strip().lower()
+        aliases = {"4k": "3840x2160", "uhd": "3840x2160", "1080p": "1920x1080", "1440p": "2560x1440"}
+        return (
+            aliases.get(normalized, normalized),
+            int(refresh),
+            connection.casefold() if connection else None,
+        )
+
+    requested_modes = sorted(key(mode) for mode in requested)
+    for configuration in configurations:
+        if sorted(key(mode) for mode in configuration.get("displays", [])) != requested_modes:
+            continue
+        documented_topology = configuration.get("topology")
+        if topology is not None and documented_topology is None:
+            return None
+        if topology is not None and documented_topology.strip().casefold() != topology.strip().casefold():
+            continue
+        return True
+    return None
+
+
 def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str, Any]) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
     limits: list[str] = []
@@ -47,6 +82,17 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         unknown |= status == "unknown"
 
     setup = request.setup
+    requested_count = len(setup.displays) if setup.displays is not None else setup.external_displays
+    requested_resolution = (
+        setup.displays[0].resolution
+        if setup.displays is not None and len(setup.displays) == 1
+        else setup.resolution
+    )
+    requested_refresh = (
+        setup.displays[0].refresh_rate_hz
+        if setup.displays is not None and len(setup.displays) == 1
+        else setup.refresh_rate_hz
+    )
     ports = laptop["ports"]
     outputs = accessory["outputs"]
     requirements = accessory["requirements"]
@@ -74,9 +120,9 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             f"Host connection type {accessory['host_connection']} is not modeled yet.",
         )
 
-    if setup.external_displays is None:
+    if requested_count is None:
         add("Display count", "unknown", "The requested external display count is not established.")
-    elif setup.external_displays:
+    elif requested_count:
         dp_required = requirements.get("host_usb_c_video")
         if dp_required is True:
             video_supported = ports.get("usb_c_video_supported")
@@ -110,12 +156,11 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "unknown",
                 "The laptop source does not specify its maximum external display count.",
             )
-        elif setup.external_displays > laptop_display_limit:
+        elif requested_count > laptop_display_limit:
             add(
                 "Display count",
                 "failed",
-                f"Requested {setup.external_displays} displays; the laptop supports "
-                f"up to {laptop_display_limit}.",
+                f"Requested {requested_count} displays; the laptop supports up to {laptop_display_limit}.",
             )
         else:
             add(
@@ -131,12 +176,11 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "unknown",
                 "The accessory source does not establish its usable display output count.",
             )
-        elif setup.external_displays > accessory_display_limit:
+        elif requested_count > accessory_display_limit:
             add(
                 "Accessory display outputs",
                 "failed",
-                f"Requested {setup.external_displays} displays; the accessory "
-                f"provides {accessory_display_limit}.",
+                f"Requested {requested_count} displays; the accessory provides {accessory_display_limit}.",
             )
         else:
             add(
@@ -154,68 +198,105 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         else:
             laptop_resolution = None
             laptop_refresh = None
-        laptop_mode_ok = _mode_at_least(
-            laptop_resolution, laptop_refresh, setup.resolution, setup.refresh_rate_hz
+        combined_modes_requested = (
+            setup.displays is not None
+            and (len(setup.displays) > 1 or setup.display_topology is not None)
+            and dp_required is True
         )
-        if laptop_mode_ok is None:
+        laptop_mode_ok = (
+            None
+            if combined_modes_requested
+            else _mode_at_least(laptop_resolution, laptop_refresh, requested_resolution, requested_refresh)
+        )
+        if laptop_mode_ok is None and not combined_modes_requested:
             add(
                 "Laptop display mode",
                 "unknown",
                 "The laptop source does not establish the maximum mode for this display path.",
             )
-        elif laptop_mode_ok:
+        elif laptop_mode_ok and not combined_modes_requested:
             add(
                 "Laptop display mode",
                 "passed",
-                f"The laptop supports at least {setup.resolution} at "
-                f"{setup.refresh_rate_hz} Hz on this path.",
+                f"The laptop supports at least {requested_resolution} at "
+                f"{requested_refresh} Hz on this path.",
             )
-        else:
+        elif not combined_modes_requested:
             add(
                 "Laptop display mode",
                 "failed",
-                f"The requested {setup.resolution} at {setup.refresh_rate_hz} Hz "
+                f"The requested {requested_resolution} at {requested_refresh} Hz "
                 "exceeds the laptop's documented maximum.",
             )
 
-        if dp_required is False:
+        if dp_required is False and not combined_modes_requested:
             checks[-1]["detail"] = (
                 "The accessory does not require DisplayPort Alt Mode, but its alternate video path "
                 "from the laptop is not modeled."
             )
 
-        accessory_mode_ok = _mode_at_least(
-            outputs.get("hdmi_max_resolution"),
-            outputs.get("hdmi_max_refresh_hz"),
-            setup.resolution,
-            setup.refresh_rate_hz,
+        accessory_mode_ok = (
+            None
+            if combined_modes_requested
+            else _mode_at_least(
+                outputs.get("hdmi_max_resolution"),
+                outputs.get("hdmi_max_refresh_hz"),
+                requested_resolution,
+                requested_refresh,
+            )
         )
-        if accessory_mode_ok is None:
+        if accessory_mode_ok is None and not combined_modes_requested:
             add(
                 "Accessory display mode",
                 "unknown",
                 "The accessory source does not establish a maximum mode for its display output.",
             )
-        elif accessory_mode_ok:
+        elif accessory_mode_ok and not combined_modes_requested:
             add(
                 "Accessory display mode",
                 "passed",
-                f"The accessory supports at least {setup.resolution} at {setup.refresh_rate_hz} Hz.",
+                f"The accessory supports at least {requested_resolution} at {requested_refresh} Hz.",
             )
-        else:
+        elif not combined_modes_requested:
             add(
                 "Accessory display mode",
                 "failed",
-                f"The requested {setup.resolution} at {setup.refresh_rate_hz} Hz "
+                f"The requested {requested_resolution} at {requested_refresh} Hz "
                 "exceeds the accessory's documented maximum.",
             )
 
-        if setup.external_displays > 1:
+        if combined_modes_requested:
+            for label, configurations in (
+                ("Laptop", ports.get("display_configurations")),
+                ("Accessory", outputs.get("display_configurations")),
+            ):
+                combined_match = _configuration_match(
+                    configurations, setup.displays or [], setup.display_topology
+                )
+                if combined_match:
+                    add(
+                        f"{label} combined display mode",
+                        "passed",
+                        "The documented simultaneous configuration supports all "
+                        f"{requested_count} requested display modes.",
+                    )
+                else:
+                    topology_note = (
+                        f" and topology '{setup.display_topology}'" if setup.display_topology else ""
+                    )
+                    add(
+                        f"{label} combined display mode",
+                        "unknown",
+                        f"The available source does not establish {requested_count} simultaneous displays "
+                        f"at the requested modes{topology_note}; individual maxima do not establish "
+                        "aggregate bandwidth or lane allocation.",
+                    )
+        elif requested_count > 1:
             add(
                 "Combined display mode",
                 "unknown",
-                "The catalogue does not establish the maximum mode supported across all requested "
-                "displays at the same time.",
+                "The request specifies a display count but not each simultaneous mode; the sources do not "
+                "establish the combined configuration, aggregate bandwidth, or lane allocation.",
             )
 
     if setup.laptop_charging is None:

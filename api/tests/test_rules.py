@@ -233,3 +233,50 @@ def test_no_external_display_does_not_require_display_mode_facts() -> None:
     accessory["outputs"].update(display_count=None, hdmi_max_resolution=None, hdmi_max_refresh_hz=None)
     result = check(laptop, accessory, external_displays=0)
     assert result["verdict"] == "compatible"
+
+
+def test_explicit_simultaneous_configuration_is_supported_when_both_sources_document_it() -> None:
+    laptop, accessory = records()
+    modes = [
+        {"resolution": "3840x2160", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": modes, "topology": "extended"}]
+    accessory["outputs"]["display_configurations"] = [{"displays": modes, "topology": "extended"}]
+    result = check(
+        laptop,
+        accessory,
+        displays=modes,
+        display_topology="extended",
+    )
+    assert result["verdict"] == "compatible"
+    assert {"Laptop combined display mode", "Accessory combined display mode"} <= {
+        item["name"] for item in result["requirements"] if item["status"] == "passed"
+    }
+
+
+def test_individual_maxima_do_not_establish_combined_bandwidth_or_topology() -> None:
+    laptop, accessory = records()
+    modes = [
+        {"resolution": "3840x2160", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": modes}]
+    accessory["outputs"]["display_configurations"] = [{"displays": modes}]
+    result = check(laptop, accessory, displays=modes, display_topology="daisy-chain")
+    assert result["verdict"] == "insufficient_data"
+    assert any("aggregate bandwidth or lane allocation" in item["detail"] for item in result["requirements"])
+
+
+def test_documented_laptop_display_count_limit_still_reports_a_specific_failure() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["maximum_external_displays"] = 1
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    result = check(laptop, accessory, displays=modes)
+    assert result["verdict"] == "incompatible"
+    assert any(
+        item["name"] == "Display count" and item["status"] == "failed" for item in result["requirements"]
+    )

@@ -7,7 +7,15 @@ from .models import AccessoryModel, LaptopModel, SourceEvidence
 
 CHECKED_ON = date(2026, 11, 2)
 
-SEED_IDENTITY_FIELDS = {"id", "brand", "name", "category", "region_variant", "review_status"}
+SEED_IDENTITY_FIELDS = {
+    "id",
+    "brand",
+    "name",
+    "category",
+    "region_variant",
+    "hardware_revision",
+    "review_status",
+}
 
 
 def validate_seed_record(record: dict) -> None:
@@ -17,6 +25,13 @@ def validate_seed_record(record: dict) -> None:
     required_metadata = ("source_title", "source_url", "excerpt")
     if any(not record.get(field) for field in required_metadata):
         raise ValueError(f"Seed record {record.get('id')} is missing source metadata.")
+
+    if record.get("review_status") == "verified" and (
+        not record.get("model_code") or "model_code" not in record.get("evidence", [])
+    ):
+        raise ValueError(
+            f"Verified seed record {record.get('id')} needs an evidenced manufacturer model code."
+        )
 
     evidence_keys = record.get("evidence", [])
     if len(evidence_keys) != len(set(evidence_keys)):
@@ -891,6 +906,8 @@ ACCESSORIES.extend(
 # Anker also currently uses model A83C3 for a 13-in-1 docking station. Keep the
 # 6-in-1 record out of public checks until the model identity is clarified.
 next(row for row in ACCESSORIES if row["id"] == "anker-nano-hub-6in1-a83c3")["review_status"] = "needs_review"
+# This listing does not establish a precise manufacturer model code; keep it out of published checks.
+next(row for row in ACCESSORIES if row["id"] == "anker-364-usb-c-hub")["review_status"] = "needs_review"
 
 
 def upsert_records(session: Session) -> None:

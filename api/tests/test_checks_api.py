@@ -7,9 +7,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base
-from app.main import accessory_rule_record, check_compatibility
-from app.models import AccessoryModel, LaptopModel, SourceEvidence
-from app.schemas import CheckRequest
+from app.main import accessory_rule_record, check_compatibility, create_result_report, laptop_rule_record
+from app.models import AccessoryModel, LaptopModel, ResultReport, SourceEvidence
+from app.schemas import CheckRequest, ResultReportWrite
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def test_check_endpoint_handler_returns_verdict_and_device_evidence(client) -> N
     )
 
     assert response.verdict == "compatible_with_limits"
-    assert response.rule_engine_version == "0.2.0"
+    assert response.rule_engine_version == "0.3.0"
     assert {item["status"] for item in response.requirements} == {"passed"}
     assert len(response.evidence) == 2
     assert response.limits
@@ -108,9 +108,28 @@ def test_check_endpoint_preserves_structured_not_found_response(client) -> None:
             CheckRequest(laptop_id="missing", accessory_id="api-hub"),
             client,
         )
-
     assert error.value.status_code == 404
     assert error.value.detail["code"] == "laptop_not_found"
+
+
+def test_result_report_persists_only_bounded_context(client) -> None:
+    report = create_result_report(
+        ResultReportWrite(
+            laptop_id="api-laptop",
+            accessory_id="api-hub",
+            setup={"external_displays": 1, "resolution": "1920x1080", "refresh_rate_hz": 60},
+            verdict="compatible_with_limits",
+            rule_engine_version="0.3.0",
+            note="The display mode seems incorrect.",
+        ),
+        client,
+    )
+
+    stored = client.get(ResultReport, report.id)
+    assert report.status == "received"
+    assert stored.laptop_id == "api-laptop"
+    assert stored.setup["resolution"] == "1920x1080"
+    assert stored.note == "The display mode seems incorrect."
 
 
 def test_charger_uses_its_usb_c_output_rating_for_charging() -> None:
@@ -124,6 +143,32 @@ def test_charger_uses_its_usb_c_output_rating_for_charging() -> None:
     )
 
     assert accessory_rule_record(charger)["outputs"]["charging_output_watts"] == 65
+
+
+def test_documented_display_configurations_reach_the_rules_adapter() -> None:
+    configuration = {
+        "displays": [
+            {"resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "HDMI"},
+            {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "DisplayPort"},
+        ],
+        "topology": "extended",
+    }
+    laptop = LaptopModel(
+        id="adapter-laptop",
+        brand="Example",
+        name="Example laptop",
+        display_configurations=[configuration],
+    )
+    accessory = AccessoryModel(
+        id="adapter-accessory",
+        brand="Example",
+        name="Example dock",
+        category="usb_c_dock",
+        display_configurations=[configuration],
+    )
+
+    assert laptop_rule_record(laptop)["ports"]["display_configurations"] == [configuration]
+    assert accessory_rule_record(accessory)["outputs"]["display_configurations"] == [configuration]
 
 
 def test_unknown_setup_requirements_produce_insufficient_data(client) -> None:

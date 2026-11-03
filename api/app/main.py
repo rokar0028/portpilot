@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
 
@@ -11,9 +12,10 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
+from .capabilities import derived_rule_fields, rule_fields
 from .catalog_admin import router as catalog_admin_router
 from .database import get_session
-from .models import AccessoryModel, LaptopModel, SourceEvidence
+from .models import AccessoryModel, LaptopModel, ResultReport, SourceEvidence
 from .observability import current_request_id, log_event, metrics, request_id_context
 from .rules import evaluate
 from .schemas import (
@@ -22,6 +24,8 @@ from .schemas import (
     CheckRequest,
     CheckResponse,
     LaptopRead,
+    ResultReportRead,
+    ResultReportWrite,
     SetupParseRequest,
     SetupParseResponse,
     SourceEvidenceRead,
@@ -132,37 +136,27 @@ def accessory_read(record: AccessoryModel) -> AccessoryRead:
 
 
 def laptop_rule_record(record: LaptopModel) -> dict:
+    ports = {target: getattr(record, source) for target, source in rule_fields("laptop", "ports").items()}
+    ports["usb_c_video"] = f"DisplayPort {record.usb_c_dp_version}" if record.usb_c_dp_version else None
     return {
-        "ports": {
-            "usb_c_port_count": record.usb_c_port_count,
-            "usb_c_video": f"DisplayPort {record.usb_c_dp_version}" if record.usb_c_dp_version else None,
-            "usb_c_video_supported": record.usb_c_video_supported,
-            "usb_c_pd_input_min_w": record.usb_c_pd_input_min_w,
-            "usb_c_pd_input_max_w": record.usb_c_pd_input_max_w,
-            "maximum_external_displays": record.maximum_external_displays,
-            "usb_c_max_resolution": record.usb_c_max_resolution,
-            "usb_c_max_refresh_hz": record.usb_c_max_refresh_hz,
-            "hdmi_max_resolution": record.hdmi_max_resolution,
-            "hdmi_max_refresh_hz": record.hdmi_max_refresh_hz,
-        },
+        "ports": ports,
         "evidence": [],
     }
 
 
 def accessory_rule_record(record: AccessoryModel) -> dict:
+    requirements = {
+        target: getattr(record, source) for target, source in rule_fields("accessory", "requirements").items()
+    }
+    outputs = {
+        target: getattr(record, source) for target, source in rule_fields("accessory", "outputs").items()
+    }
+    for target, source in derived_rule_fields("accessory", "outputs", record.category).items():
+        outputs[target] = getattr(record, source)
     return {
         "host_connection": record.host_connection,
-        "requirements": {"host_usb_c_video": record.requires_usb_c_dp_alt_mode},
-        "outputs": {
-            "display_count": record.hdmi_port_count,
-            "hdmi_max_resolution": record.hdmi_max_resolution,
-            "hdmi_max_refresh_hz": record.hdmi_max_refresh_hz,
-            "charging_output_watts": (
-                record.usb_c_output_max_w
-                if record.category == "usb_c_charger"
-                else record.pd_pass_through_max_w
-            ),
-        },
+        "requirements": requirements,
+        "outputs": outputs,
         "evidence": [],
     }
 
@@ -299,3 +293,24 @@ def check_compatibility(
         check_log_fields["request_id"] = request_id
     log_event("compatibility_check", **check_log_fields)
     return CheckResponse(**result)
+
+
+@app.post("/result-reports", response_model=ResultReportRead, status_code=201)
+def create_result_report(
+    request: ResultReportWrite,
+    session: Session = Depends(get_session),
+) -> ResultReportRead:
+    report = ResultReport(
+        id=f"report-{uuid4().hex}",
+        laptop_id=request.laptop_id,
+        accessory_id=request.accessory_id,
+        setup=request.setup.model_dump(mode="json"),
+        verdict=request.verdict,
+        rule_engine_version=request.rule_engine_version,
+        note=request.note,
+        created_at=datetime.now(UTC),
+    )
+    session.add(report)
+    session.commit()
+    log_event("result_report_received", verdict=request.verdict)
+    return ResultReportRead(id=report.id)
