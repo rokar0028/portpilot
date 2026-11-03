@@ -29,7 +29,9 @@ Language models can omit or misread intent. Their output is schema-validated but
 
 ## Tests and evaluation
 
-Run focused deterministic tests without a provider:
+### Running Tests Without an External Provider
+
+Run deterministic unit and mock-evaluation tests without network dependencies:
 
 ```powershell
 cd api
@@ -38,8 +40,49 @@ ruff check app/setup_parser.py app/schemas.py app/main.py app/rules.py tests/tes
 ruff format --check app/setup_parser.py app/schemas.py app/main.py app/rules.py tests/test_setup_parser.py tests/test_checks_api.py scripts/evaluate_setup_parser.py
 ```
 
-The five-case prompt set is `api/evaluations/phase8_setup_prompts.json`. To evaluate a live configured model, run `python scripts/evaluate_setup_parser.py` from `api`. This sends those prompts to the configured provider and reports exact field matches, clarification behavior, and failures. It is an opt-in parsing evaluation, not a compatibility evaluation. Results vary by provider/model and are not run as part of deterministic tests. Report per-field denominators and retain mismatches when sharing results; do not describe this small set as a general accuracy guarantee.
+### Versioned V2 Benchmark Dataset
 
-### Initial evaluation report
+The versioned evaluation benchmark is located at `api/evaluations/v2_setup_prompts.json` (28 diverse test cases). It covers:
+1. **Standard single-display setups** (1080p, 1440p, 4K, 30/60 Hz, ultrawide, charging/no-charge variants).
+2. **High-refresh gaming setups** (1080p@144Hz, 1440p@120Hz/144Hz).
+3. **Multi-display setups** (dual 1080p, dual 4K, triple 1080p).
+4. **Underspecified setups** (partial specifications requiring explicit null or default assignments).
+5. **Ambiguous descriptions** (subjective or vague requests requiring `needs_clarification: true`).
+6. **Unsupported peripheral requests** (Ethernet, analog audio jacks, SD cards, USB-A ports verifying `unsupported_requests` surfacing).
+7. **Prompt injection / safety tests** (prompts attempting to override instructions or dictate compatibility).
 
-Status: **not run against a live provider**. No provider is configured in this checkout. The five prompts cover direct requirements, explicit no-charge intent, underspecification, ambiguity, and an unsupported Ethernet request. Field-level live accuracy is therefore not yet measured. The deterministic mocked tests verify contract extraction, null/clarification handling, unsupported-field surfacing, invalid response rejection, provider unavailability, and that only the user's description is included in provider input.
+### Evaluation Runner Usage
+
+The evaluation script (`api/scripts/evaluate_setup_parser.py`) provides multiple operational modes:
+
+1. **Benchmark Schema Validation (Dry Run):**
+   ```powershell
+   python scripts/evaluate_setup_parser.py --dry-run
+   ```
+2. **Offline Deterministic Mock Evaluation (for CI):**
+   ```powershell
+   python scripts/evaluate_setup_parser.py --mock --output-json evaluations/runs/mock_evaluation_run.json --output-md evaluations/runs/mock_evaluation_run.md
+   ```
+3. **Live Provider Evaluation (Opt-In):**
+   ```powershell
+   python scripts/evaluate_setup_parser.py --prompts-file evaluations/v2_setup_prompts.json --output-json evaluations/runs/v2_evaluation_run.json --output-md evaluations/runs/v2_evaluation_run.md
+   ```
+
+### Evaluation Metrics and Interpretation
+
+The runner computes and outputs:
+- **Per-field accuracy:** percentage of exact matches for `external_displays`, `resolution`, `refresh_rate_hz`, and `laptop_charging`.
+- **Category breakdown:** exact match rate across each of the 7 query categories.
+- **Clarification recall:** proportion of ambiguous cases where `needs_clarification` was correctly triggered.
+- **Unsupported requests recall:** proportion of peripheral requests where `unsupported_requests` was surfaced.
+- **Latency statistics:** min, median (p50), p95, and max roundtrip latency in milliseconds.
+- **Failure analysis:** verbatim expected vs actual field mappings for every mismatch.
+
+> [!IMPORTANT]
+> **Separation of Concerns:** Setup parsing evaluation measures natural-language requirement extraction fidelity only. It does not measure hardware compatibility. Hardware compatibility calculations are 100% deterministic, executed exclusively by the PortPilot rules engine, and verified by dedicated compatibility test suites.
+
+### Live Provider Evaluation Status
+
+- **Status in unconfigured checkouts:** **Pending live provider configuration**. When `SETUP_PARSER_BASE_URL` or `SETUP_PARSER_MODEL` is not set in `api/.env`, `POST /setup-requests/parse` returns HTTP 503 (`setup_parser_unavailable`). In accordance with Workstream 8 policy, no live model accuracy claims are published until a maintainer completes a live evaluation with a documented provider and model.
+- **Mock baseline:** The evaluation runner and 28-case benchmark suite pass 100% of schema validation and deterministic mock execution tests in `tests/test_setup_parser.py`.
+
