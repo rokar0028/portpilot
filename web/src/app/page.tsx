@@ -166,6 +166,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setResult(null);
+    setReportMessage("");
     try {
       const response = await fetch(`${API}/checks`, {
         method: "POST",
@@ -262,25 +263,50 @@ export default function Home() {
           )
             ? sharedAccessory!
             : "";
-          const requestedDisplays = Number(params.get("displays"));
-          const requestedRefresh = Number(params.get("refresh"));
+          const rawDisplays = params.get("displays");
+          const rawRefresh = params.get("refresh");
+          const rawResolution = params.get("resolution");
+          const rawCharging = params.get("charging");
+
+          const parsedDisplays =
+            rawDisplays !== null &&
+            rawDisplays !== "" &&
+            !isNaN(Number(rawDisplays))
+              ? Number(rawDisplays)
+              : null;
+          const parsedRefresh =
+            rawRefresh !== null &&
+            rawRefresh !== "" &&
+            !isNaN(Number(rawRefresh))
+              ? Number(rawRefresh)
+              : null;
+
           const nextSetup: Setup = {
             external_displays:
-              params.has("displays") &&
-              [0, 1, 2, 3, 4].includes(requestedDisplays)
-                ? requestedDisplays
+              parsedDisplays !== null &&
+              [0, 1, 2, 3, 4].includes(parsedDisplays)
+                ? parsedDisplays
                 : 1,
-            resolution: ["1920x1080", "2560x1440", "3840x2160"].includes(
-              params.get("resolution") ?? "",
-            )
-              ? params.get("resolution")!
-              : "1920x1080",
-            refresh_rate_hz: [30, 60].includes(requestedRefresh)
-              ? requestedRefresh
-              : 60,
-            laptop_charging: params.has("charging")
-              ? params.get("charging") === "true"
-              : true,
+            resolution:
+              rawResolution &&
+              rawResolution !== "null" &&
+              rawResolution.length <= 30
+                ? rawResolution
+                : "1920x1080",
+            refresh_rate_hz:
+              parsedRefresh !== null &&
+              parsedRefresh >= 24 &&
+              parsedRefresh <= 240
+                ? parsedRefresh
+                : 60,
+            laptop_charging:
+              rawCharging === "true"
+                ? true
+                : rawCharging === "false"
+                  ? false
+                  : rawCharging === "null" || rawCharging === ""
+                    ? null
+                    : true,
           };
           setCatalog(data);
           setLaptopId(nextLaptop);
@@ -500,14 +526,14 @@ export default function Home() {
                   ? `up to ${selectedLaptop.usb_c_pd_input_max_w} W`
                   : "not documented"}
               </p>
-              {selectedLaptop.evidence.map((source) => (
+              {groupEvidence(selectedLaptop.evidence).map(([url, records]) => (
                 <a
-                  href={source.url}
+                  href={url}
                   target="_blank"
                   rel="noreferrer"
-                  key={source.id}
+                  key={records[0].id}
                 >
-                  {source.title} ↗
+                  {records[0].title} ↗
                 </a>
               ))}
             </details>
@@ -603,16 +629,18 @@ export default function Home() {
                   </>
                 )}
               </p>
-              {selectedAccessory.evidence.map((source) => (
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  key={source.id}
-                >
-                  {source.title} ↗
-                </a>
-              ))}
+              {groupEvidence(selectedAccessory.evidence).map(
+                ([url, records]) => (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    key={records[0].id}
+                  >
+                    {records[0].title} ↗
+                  </a>
+                ),
+              )}
             </details>
           )}
           <p className="catalog-help">
@@ -817,7 +845,7 @@ export default function Home() {
               <div>
                 <strong>We couldn’t load the device list.</strong>
                 <span>
-                  Make sure the PortPilot API is running at localhost:8001, then
+                  Make sure the PortPilot API is running and reachable, then
                   retry.
                 </span>
               </div>
@@ -828,11 +856,6 @@ export default function Home() {
               >
                 Try again
               </button>
-              <p className="share-explainer">
-                This link restores your selections and reruns the check using
-                the current catalogue and rules. It does not save this result as
-                a snapshot.
-              </p>
             </div>
           )}
           {!catalogError && (
@@ -946,6 +969,11 @@ export default function Home() {
                   {shareMessage}
                 </span>
               )}
+              <p className="share-explainer">
+                This link restores your selections and reruns the check using
+                the current catalogue and rules. It does not save this result as
+                a snapshot.
+              </p>
               {result.limits.length > 0 && (
                 <ul className="limit-list" aria-label="Known limitations">
                   {result.limits.map((limit) => (

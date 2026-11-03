@@ -5,10 +5,10 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 ## Current vertical slice
 
 - Laptop: Lenovo IdeaPad Slim 3 14IRH10R
-- Accessory: Anker 364 USB-C Hub (10-in-1, Dual 4K HDMI)
+- Accessory: Anker Nano Hub (7-in-1, A83D2)
 - Setup: one 1080p external display plus laptop charging
 
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery on the laptop, and HDMI plus up to 85 W pass-through on the hub. They do not establish every requirement for this setup, so PortPilot deliberately reports **Insufficient data** rather than guessing. The API catalogue is database-backed and currently publishes 15 laptops and 13 accessories; two accessories are held for model-identity review.
+The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 15 laptops and 13 accessories; two accessories are held for model-identity review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
 
 The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check using the current catalogue and rules; the URL does not preserve the original result as a snapshot. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 
@@ -22,8 +22,11 @@ The [coverage and limitations page](/coverage) reports live verified catalogue c
 - [Workstream 2 implementation plan](docs/v2-workstream-2-implementation-plan.md) — evidence conflicts, rechecks, and correction history.
 - [Workstream 3 implementation plan](docs/v2-workstream-3-implementation-plan.md) — capability registry integration and consistency checks.
 - [Workstream 5 implementation plan](docs/v2-workstream-5-implementation-plan.md) — model-finding help, mobile readability, low-data reporting, and sharing behavior.
+- [Workstream 7 implementation plan](docs/v2-workstream-7-implementation-plan.md) — latency target, duration distributions, and migration recovery.
+- [Workstream 8 implementation plan](docs/v2-workstream-8-implementation-plan.md) — live-provider parser evaluation, versioned benchmarks, and accuracy reporting.
 - [Capability registry contributor guide](docs/capability-registry.md) — how to add a capability across catalogue, evidence, publication, and rules.
 - [V2 migration and rollout notes](docs/v2-migration-rollout.md) — revision history, data impact, rollout, and rollback guidance.
+- [Database operations and migration recovery runbook](docs/database-operations-runbook.md) — tested backup, restore, and failure recovery instructions for SQLite, Compose PostgreSQL, and hosted preview.
 - [Source-review playbook](docs/source-review-playbook.md) — review, recheck, and correction process.
 - [Catalogue identity and evidence standard](docs/catalogue-identity-and-evidence.md) — contributor guidance for exact device identity and publication.
 - [Phase 0 implementation plan](docs/implementation%20plan.md) — initial scope and vertical-slice decisions.
@@ -91,7 +94,7 @@ Open http://localhost:3000. Compose waits for PostgreSQL health before starting 
 
 ## Free Render preview configuration
 
-[`render.yaml`](render.yaml) defines the API, Next.js frontend, and PostgreSQL database as free Render resources in Singapore. It is configuration only; PortPilot is not deployed yet. Render Free web services sleep after 15 minutes without traffic, and Free Postgres expires after 30 days with no backups. Use this only as a temporary preview and do not store user data there. The API runs migrations and seeds the catalogue when it starts. Deployment still requires this private GitHub repository to be connected to Render.
+[`render.yaml`](render.yaml) defines the API, Next.js frontend, and PostgreSQL database as free Render resources in Singapore. It is configuration only; PortPilot is not deployed yet. Render Free web services sleep after 15 minutes without traffic, and Free Postgres expires after 30 days with no backups. Use this only as a temporary preview and do not store user data there. The API runs migrations and seeds the catalogue when it starts. Deployment still requires this private GitHub repository to be connected to Render. See [Preview and release playbook](docs/preview-and-release-playbook.md) for pre-release verification, smoke testing, and rollback procedures.
 
 ## Quality commands
 
@@ -99,9 +102,11 @@ Run these from the indicated directory:
 
 ```powershell
 # api/
-ruff check app migrations tests
-ruff format --check app migrations tests
+ruff check app migrations tests scripts
+ruff format --check app migrations tests scripts
 python -m pytest tests -q
+python scripts/evaluate_setup_parser.py --mock
+python scripts/verify_preview_deployment.py --api-url http://127.0.0.1:8001
 
 # web/
 npm run lint
@@ -174,14 +179,29 @@ The Render Free preview configuration is prepared but not deployed. The default 
 
 ## Operations and monitoring
 
-- `GET /health` is a database-independent liveness check. `GET /ready` checks database connectivity and returns only a generic not-ready response on failure.
-- `GET /metrics` exposes Prometheus text metrics for HTTP request counts by method, route template, and status, plus compatibility verdict counts by rule-engine version. It is process-local: counts reset on restart and are not aggregated across multiple workers.
-- API request logs are structured JSON and include a server-generated request ID, method, route template, status, and elapsed time. Compatibility logs include verdict and rule-engine version. Request bodies, query strings, credentials, and device identifiers are not logged.
-- Configure the hosting provider to retain and alert on API error logs and service availability. The application does not send metrics to an external monitoring service; a provider-side scraper or collector can read `/metrics`.
+- **Health and readiness:** `GET /health` is a database-independent liveness check. `GET /ready` checks database connectivity and returns only a generic not-ready response (`503 not_ready`) on failure without exposing credentials or internal database errors.
+- **Service Level Objective (SLO):** PortPilot's API response-time objective is p95 server duration $\le 500$ ms at 5 requests/second over a 30-minute steady-state window for the weighted deterministic request mix (40% `GET /devices`, 30% `POST /checks`, 10% `GET /devices/laptops/{id}`, 10% `GET /devices/accessories/{id}`, 5% `GET /ready`, 5% `POST /result-reports`) against seeded PostgreSQL. In local load validation, the mix measured p50 of 23.8 ms, p95 of 50.5 ms, p99 of 92.9 ms, throughput of 5.01 req/s, and 0.00% error rate. Natural language parsing (`POST /setup-requests/parse`) is backed by an external AI provider and is tracked and evaluated separately from this deterministic SLO.
+- **Duration distributions and metrics:** `GET /metrics` exposes Prometheus text metrics covering:
+  - Total HTTP requests (`portpilot_http_requests_total`) by method, route template, and status.
+  - Duration distributions (`portpilot_http_request_duration_seconds`) as standard histogram buckets (`le="0.005"` through `le="+Inf"`, plus sum and count) by method, route template, and status.
+  - Compatibility checks (`portpilot_compatibility_checks_total`) by verdict and rule-engine version.
+  - Metrics are process-local: observations reset on process restart and are not aggregated across multi-worker deployments without an external Prometheus scraper.
+- **Safe logging and slow-route detection:** Structured JSON logs record `http_request` events with request ID, method, normalized route template, status code, and elapsed milliseconds. If elapsed time meets or exceeds `SLOW_REQUEST_THRESHOLD_MS` (default 500 ms), a warning event `http_slow_request` is emitted. Ordinary requests under threshold do not produce duplicate events. Sensitive values—including query parameters, authorization tokens, request/response bodies, client IP addresses, and setup text—are strictly excluded from logs and metrics.
+- **Database operations and migration recovery:** Tested backup, restore, migration failure response, and rollback runbooks for local SQLite, Compose PostgreSQL, and Render Free are documented in the [Database Operations and Migration Recovery Runbook](docs/database-operations-runbook.md). Storing persistent user data on Render Free is blocked until a durable database tier with automated backups and point-in-time recovery is provisioned.
 
 ## Demo preparation
 
 See [the 90-second demo outline](docs/demo-outline.md) for candidate compatible and incompatible checks, the result details to show, and the recording sequence.
+
+## Contributing
+
+We welcome contributions! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for local environment setup, contribution tracks (catalogue curation, capability extension, rules engine, frontend), quality commands, and pull request guidelines. Key contributor references:
+- [Catalogue Identity and Evidence Standard](docs/catalogue-identity-and-evidence.md)
+- [Source Review Playbook](docs/source-review-playbook.md)
+- [Capability Registry Contributor Guide](docs/capability-registry.md)
+- [Database Operations and Migration Recovery Runbook](docs/database-operations-runbook.md)
+- [Preview and Release Playbook](docs/preview-and-release-playbook.md)
+- [Accessibility Screen-Reader Test Plan](docs/accessibility-screen-reader-test-plan.md)
 
 ## Project structure
 
