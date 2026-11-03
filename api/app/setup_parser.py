@@ -71,7 +71,14 @@ def parse_setup(description: str) -> SetupParseResponse:
         ) from error
 
     try:
-        content = body["choices"][0]["message"]["content"]
+        content = body["choices"][0]["message"]["content"].strip()
+        if content.startswith("```"):
+            lines = content.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            content = "\n".join(lines).strip()
         parsed = json.loads(content)
         expected_setup_fields = {
             "external_displays",

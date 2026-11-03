@@ -148,3 +148,125 @@ def test_provider_transport_failure_maps_to_safe_503(monkeypatch):
         parse_setup_request(SetupParseRequest(description="One display"))
     assert error.value.status_code == 503
     assert "manual" in error.value.detail["message"]
+
+
+def test_v2_prompts_benchmark_schema_and_categories() -> None:
+    from pathlib import Path
+
+    benchmark_path = Path(__file__).resolve().parents[1] / "evaluations" / "v2_setup_prompts.json"
+    assert benchmark_path.is_file()
+
+    cases = json.loads(benchmark_path.read_text(encoding="utf-8"))
+    assert len(cases) >= 25
+
+    expected_categories = {
+        "standard_single",
+        "high_refresh",
+        "multi_display",
+        "underspecified",
+        "ambiguous",
+        "unsupported_peripheral",
+        "safety_adversarial",
+    }
+    actual_categories = {c.get("category") for c in cases}
+    assert expected_categories.issubset(actual_categories)
+
+    for case in cases:
+        assert "id" in case
+        assert "prompt" in case and len(case["prompt"]) >= 5
+        assert "expected" in case
+        exp = case["expected"]
+        assert "external_displays" in exp
+        assert "resolution" in exp
+        assert "refresh_rate_hz" in exp
+        assert "laptop_charging" in exp
+
+
+def test_evaluation_runner_mock_execution() -> None:
+    import sys
+    from pathlib import Path
+
+    api_root = Path(__file__).resolve().parents[1]
+    if str(api_root) not in sys.path:
+        sys.path.insert(0, str(api_root))
+
+    from scripts.evaluate_setup_parser import load_cases, render_markdown, run_evaluation
+
+    benchmark_path = api_root / "evaluations" / "v2_setup_prompts.json"
+    cases = load_cases(benchmark_path)
+    report = run_evaluation(cases, mock=True)
+
+    assert report["mode"] == "mock"
+    assert report["total_cases"] == len(cases)
+    assert report["overall_exact_match_rate"] == 1.0
+    assert report["failure_count"] == 0
+    assert report["clarification"]["recall"] == 1.0
+    assert report["unsupported"]["recall"] == 1.0
+    for field in ("external_displays", "resolution", "refresh_rate_hz", "laptop_charging"):
+        assert report["fields"][field]["accuracy"] == 1.0
+
+    markdown = render_markdown(report)
+    assert "# PortPilot Setup Parser Evaluation Report" in markdown
+    assert "Execution Mode:** `MOCK`" in markdown
+    assert "Hardware compatibility verdicts are 100% deterministic" in markdown
+
+
+def test_evaluation_runner_detects_and_records_failures() -> None:
+    import sys
+    from pathlib import Path
+
+    api_root = Path(__file__).resolve().parents[1]
+    if str(api_root) not in sys.path:
+        sys.path.insert(0, str(api_root))
+
+    from scripts.evaluate_setup_parser import run_evaluation
+
+    synthetic_failing_case = [
+        {
+            "id": "synthetic-mismatch",
+            "category": "standard_single",
+            "prompt": "One 1080p display at 60 Hz",
+            # Intentionally mismatch expected with mock's generated output for testing failure recording
+            "expected": {
+                "external_displays": 99,  # Mock returns None or valid bounded, so this mismatches
+                "resolution": "1920x1080",
+                "refresh_rate_hz": 60,
+                "laptop_charging": True,
+            },
+            "expect_clarification": False,
+            "expect_unsupported": False,
+        }
+    ]
+
+    report = run_evaluation(synthetic_failing_case, mock=True)
+    assert report["failure_count"] >= 1
+    assert report["failures"][0]["id"] == "synthetic-mismatch"
+    assert report["failures"][0]["expected"]["external_displays"] == 99
+
+
+def test_parser_handles_markdown_code_fenced_json(monkeypatch):
+    configure_provider(monkeypatch)
+    raw_json = json.dumps(
+        {
+            "setup": {
+                "external_displays": 1,
+                "resolution": "1920x1080",
+                "refresh_rate_hz": 60,
+                "laptop_charging": True,
+            },
+            "needs_clarification": False,
+            "clarification_questions": [],
+            "unsupported_requests": [],
+        }
+    )
+    fenced_content = f"```json\n{raw_json}\n```"
+
+    monkeypatch.setattr(
+        setup_parser,
+        "urlopen",
+        lambda *_args, **_kwargs: FakeResponse({"choices": [{"message": {"content": fenced_content}}]}),
+    )
+    parsed = setup_parser.parse_setup("One 1080p monitor and charging")
+    assert parsed.setup.external_displays == 1
+    assert parsed.setup.resolution == "1920x1080"
+    assert parsed.setup.laptop_charging is True
