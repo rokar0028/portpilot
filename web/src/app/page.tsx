@@ -775,7 +775,9 @@ export default function Home() {
                         })
                       }
                     >
-                      <option value="">Unknown</option>
+                      <option value="" disabled>
+                        Choose display count
+                      </option>
                       {setup.external_displays !== null &&
                         ![0, 1, 2, 3, 4].includes(setup.external_displays) && (
                           <option value={setup.external_displays}>
@@ -804,7 +806,9 @@ export default function Home() {
                         })
                       }
                     >
-                      <option value="">Unknown</option>
+                      <option value="" disabled>
+                        Choose resolution
+                      </option>
                       {setup.resolution &&
                         !["1920x1080", "2560x1440", "3840x2160"].includes(
                           setup.resolution,
@@ -860,7 +864,9 @@ export default function Home() {
                       })
                     }
                   >
-                    <option value="">Unknown</option>
+                    <option value="" disabled>
+                      Choose refresh
+                    </option>
                     {setup.refresh_rate_hz &&
                       ![30, 60].includes(setup.refresh_rate_hz) && (
                         <option value={setup.refresh_rate_hz}>
