@@ -165,6 +165,19 @@ test("distinguishes documented incompatibility from missing display-mode data", 
     }),
   ).toBeVisible();
   await expect(page.getByText(/^(UNVERIFIED|NOT VERIFIED)$/i)).toBeVisible();
+
+  const missingDataRegion = page.getByRole("region", {
+    name: "Missing specifications breakdown",
+  });
+  await expect(missingDataRegion).toBeVisible();
+  await expect(
+    missingDataRegion.getByText("What manufacturer data is missing?"),
+  ).toBeVisible();
+  const unverifiedList = page.getByRole("list", {
+    name: "Unverified requirements",
+  });
+  await expect(unverifiedList).toBeVisible();
+  await expect(unverifiedList.locator("li")).not.toHaveCount(0);
 });
 
 test("clears a previous result when any device or setup input changes", async ({

@@ -70,11 +70,16 @@ In real-world computing, general-purpose LLMs and e-commerce listings produce fr
   - Apple MacBook Air 13-inch (M2, Model A2681) capturing the 1 external display hardware limit.
   - Dell WD19S 130W USB-C Dock (Model K20A001) capturing DP 1.4, multi-display MST configurations, and 90W Dell / 65W generic PD.
   - Anker 555 USB-C Hub (8-in-1, Model A8383) capturing 100W PD input, 85W pass-through with 15W internal reservation, and 4K@60Hz HDMI.
+- [x] Enhance frontend diagnostic presentation:
+  - Styled `.limit-callout` hardware constraints container with distinct banner styling and screen-reader accessible region.
+  - Interactive `.insufficient-data-box` breakdown detailing specific missing manufacturer specifications.
+- [x] Implement browser E2E test coverage for new diagnostic UI in `web/e2e/accessibility-contracts.spec.ts` (Scenario 4 & Scenario 6) and `web/e2e/checker.spec.ts`.
 
 ## Acceptance criteria
 
 - [x] macOS multi-display setups over standard USB-C DP Alt Mode correctly evaluate to `compatible_with_limits` (mirrored only) or `incompatible` for extended desktop requests.
 - [x] Power delivery pass-through calculations account for accessory power draw overhead against laptop minimum required wattage.
 - [x] Seeded high-impact, evidence-backed device models with verified manufacturer excerpts (19 laptops, 17 verified accessories).
-- [x] All unit, integration, and build checks pass without regressions (129 pytest tests, clean Next.js build).
-- [x] API code passes `ruff check` and `ruff format --check` cleanly with 0 errors.
+- [x] Diagnostic UI enhancements render hardware limits callout and missing specification breakdowns with complete ARIA semantics.
+- [x] All unit, integration, accessibility, and build checks pass without regressions (129 pytest tests, all 6 ARIA contract E2E scenarios, clean Next.js build).
+- [x] API and frontend code passes `ruff check`, `ruff format --check`, `eslint`, and `prettier --check` cleanly with 0 errors.

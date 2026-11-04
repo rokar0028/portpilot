@@ -261,7 +261,14 @@ test.describe("Screen-Reader & ARIA Contract Test Suite (WS-6)", () => {
     await expect(verdictHeading).toBeVisible();
     await expect(verdictHeading).toHaveText("Works with limits");
 
-    // 3. Known limitations list has accessible label
+    // 3. Known limitations callout has accessible region and list
+    const limitRegion = page.getByRole("region", {
+      name: "Hardware limitations and constraints",
+    });
+    await expect(limitRegion).toBeVisible();
+    await expect(
+      limitRegion.getByText("Hardware constraints & limitations"),
+    ).toBeVisible();
     const limitList = page.locator(
       'ul.limit-list[aria-label="Known limitations"]',
     );
@@ -365,5 +372,67 @@ test.describe("Screen-Reader & ARIA Contract Test Suite (WS-6)", () => {
       content: document.documentElement.scrollWidth,
     }));
     expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
+  });
+
+  test("Scenario 6: Insufficient data breakdown — missing specifications breakdown region and unverified requirements list", async ({
+    page,
+  }) => {
+    await selectDefaultDevices(page);
+
+    // Mock an insufficient_data result with unverified requirements
+    await page.route("**/checks", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          verdict: "insufficient_data",
+          summary:
+            "We could not confirm if this hub works because laptop video mode is unverified.",
+          limits: [],
+          requirements: [
+            {
+              name: "USB-C Video Output",
+              status: "unknown",
+              detail:
+                "DisplayPort Alt Mode specification has not been verified from manufacturer documentation.",
+            },
+            {
+              name: "Charging Compatibility",
+              status: "passed",
+              detail: "Pass-through charging power is adequate.",
+            },
+          ],
+          evidence: [],
+          rule_engine_version: "0.4.0",
+        }),
+      }),
+    );
+
+    await page.getByRole("button", { name: /check my setup/i }).click();
+
+    // 1. Result heading indicates insufficient data
+    const verdictHeading = page.locator("h2.verdict-title");
+    await expect(verdictHeading).toBeVisible();
+    await expect(verdictHeading).toHaveText("Not enough information");
+
+    // 2. Missing specifications breakdown region is rendered with heading
+    const missingDataRegion = page.getByRole("region", {
+      name: "Missing specifications breakdown",
+    });
+    await expect(missingDataRegion).toBeVisible();
+    await expect(
+      missingDataRegion.getByText("What manufacturer data is missing?"),
+    ).toBeVisible();
+
+    // 3. Unverified requirements list contains the unverified item
+    const unverifiedList = page.getByRole("list", {
+      name: "Unverified requirements",
+    });
+    await expect(unverifiedList).toBeVisible();
+    await expect(unverifiedList.locator("li")).toHaveCount(1);
+    await expect(unverifiedList).toContainText("USB-C Video Output");
+    await expect(unverifiedList).toContainText(
+      "DisplayPort Alt Mode specification has not been verified",
+    );
   });
 });
