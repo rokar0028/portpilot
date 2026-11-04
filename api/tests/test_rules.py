@@ -605,7 +605,8 @@ def test_charger_with_display_request_is_incompatible() -> None:
     result_zero = check(laptop, charger, external_displays=0, laptop_charging=True)
     assert result_zero["verdict"] == "compatible"
 
-    # Requesting multiple displays with explicit modes with a charger should fail accessory combined display mode
+    # Requesting multiple displays with explicit modes with a charger
+    # should fail accessory combined display mode
     modes = [
         {"resolution": "1920x1080", "refresh_rate_hz": 60},
         {"resolution": "1920x1080", "refresh_rate_hz": 60},

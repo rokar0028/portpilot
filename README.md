@@ -24,6 +24,7 @@ The [coverage and limitations page](/coverage) reports live verified catalogue c
 - [Workstream 5 implementation plan](docs/v2-workstream-5-implementation-plan.md) — model-finding help, mobile readability, low-data reporting, and sharing behavior.
 - [Workstream 7 implementation plan](docs/v2-workstream-7-implementation-plan.md) — latency target, duration distributions, and migration recovery.
 - [Workstream 8 implementation plan](docs/v2-workstream-8-implementation-plan.md) — live-provider parser evaluation, versioned benchmarks, and accuracy reporting.
+- [Workstream 11 implementation plan](docs/v2-workstream-11-implementation-plan.md) — hardware protocol fidelity, physical bus constraints, and catalogue depth.
 - [Capability registry contributor guide](docs/capability-registry.md) — how to add a capability across catalogue, evidence, publication, and rules.
 - [V2 migration and rollout notes](docs/v2-migration-rollout.md) — revision history, data impact, rollout, and rollback guidance.
 - [Database operations and migration recovery runbook](docs/database-operations-runbook.md) — tested backup, restore, and failure recovery instructions for SQLite, Compose PostgreSQL, and hosted preview.

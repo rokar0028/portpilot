@@ -7,7 +7,6 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 from threading import Lock
 
-
 STANDARD_LOG_RECORD_ATTRS = {
     "args",
     "asctime",

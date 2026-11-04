@@ -135,6 +135,19 @@ Establish the shared baseline that lets the other workstreams land without dupli
 
 **Completion criteria:** a new contributor can run the project and prepare a reviewable catalogue or rules change using repository documentation. Work is implemented and verified in [Workstream 10 implementation plan](v2-workstream-10-implementation-plan.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+### 11. Hardware protocol fidelity, physical bus constraints, and catalogue depth
+
+**Plan:** [Workstream 11 implementation plan](v2-workstream-11-implementation-plan.md). Evaluates real-world protocol physics and operating system constraints to eliminate false-positive compatibility verdicts commonly returned by commercial e-commerce filters and LLMs.
+
+- [ ] Add macOS DisplayPort Multi-Stream Transport (MST) vs. Single-Stream Transport (SST) rule: flag extended multi-display setups over standard USB-C Alt Mode docks as incompatible or limited to mirrored display.
+- [ ] Add USB 3.0 vs. 4K@60Hz high-speed lane bifurcation rule: model the 2-lane DP trade-off on DP 1.2 hosts when the dock provides USB 3.0 data.
+- [ ] Add net Power Delivery pass-through margin calculation ($W_{\text{charger}} - W_{\text{hub\_overhead}}$) against host minimum input wattage.
+- [ ] Expand the verified catalogue with high-impact hardware (Apple Silicon MacBooks, Dell XPS/WD19, Lenovo ThinkPads).
+- [ ] Enhance UI diagnostic transparency for "Insufficient data" results and step-by-step physical bus breakdown.
+- [ ] Maintain 0-error code quality (`ruff check`, `ruff format`, pytest).
+
+**Completion criteria:** multi-display macOS setups and high-resolution DP 1.2 lane constraints evaluate with protocol accuracy; net power margins account for hub overhead; and newly seeded devices have verified manufacturer evidence. Detailed tracking is in [Workstream 11 implementation plan](v2-workstream-11-implementation-plan.md).
+
 ## Suggested implementation order
 
 1. [x] Write the contributor guide and source-review playbook, and agree on the model identity and conflict-review requirements.
@@ -146,12 +159,13 @@ Establish the shared baseline that lets the other workstreams land without dupli
 7. [x] Define the response-time target, improve latency monitoring, and document migration recovery. Implementation and verification details are recorded in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md) and [Database operations and migration recovery runbook](database-operations-runbook.md).
 8. [x] Run and publish a live-provider parser evaluation (benchmark, runner, mock harness, and unit tests verified; live evaluation protocol documented).
 9. [x] Deploy an isolated preview, complete end-to-end verification and release checks, then make a release decision. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
+10. [ ] Implement Workstream 11 protocol fidelity (macOS MST, DP lane bifurcation, net PD calculations, and expanded catalogue seeds).
 
 Dependencies may change as implementation reveals details. Keep this document updated with decisions and completion notes rather than treating the suggested order as a rigid schedule.
 
-**Current sequencing:** Workstreams 0–5 and 7–10 are complete. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md), [Database operations runbook](database-operations-runbook.md), and [Preview and release playbook](preview-and-release-playbook.md).
+**Current sequencing:** Workstreams 0–5 and 7–10 are complete. Workstream 11 extends physical bus fidelity and catalogue depth. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md), [Database operations runbook](database-operations-runbook.md), and [Preview and release playbook](preview-and-release-playbook.md).
 
-**Planning status:** All core planned V2 workstreams (Workstreams 0–5 and 7–10) are implemented and verified. The manual screen-reader audio pass (Workstream 6) remains the sole pending manual testing item.
+**Planning status:** Core V2 workstreams (Workstreams 0–5 and 7–10) are implemented and verified. Workstream 6 (screen-reader manual audio pass) and Workstream 11 (hardware protocol fidelity and bus constraints) form the active backlog.
 
 ## Release acceptance checklist
 

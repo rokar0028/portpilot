@@ -128,13 +128,11 @@ def test_malformed_or_out_of_range_provider_output_is_rejected(monkeypatch):
 def test_null_or_non_string_message_content_is_safely_rejected(monkeypatch):
     configure_provider(monkeypatch)
     for invalid_content in (None, 123, False, []):
-        monkeypatch.setattr(
-            setup_parser,
-            "urlopen",
-            lambda *_args, **_kwargs: FakeResponse(
-                {"choices": [{"message": {"content": invalid_content}}]}
-            ),
-        )
+
+        def make_fake_response(*_args, c=invalid_content, **_kwargs):
+            return FakeResponse({"choices": [{"message": {"content": c}}]})
+
+        monkeypatch.setattr(setup_parser, "urlopen", make_fake_response)
         with pytest.raises(ParserInvalidResponse):
             setup_parser.parse_setup("One display")
 

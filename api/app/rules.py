@@ -219,7 +219,10 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
 
         is_display = accessory.get("category") in {"portable_monitor", "external_display"}
         config_display_max = (
-            max((len(cfg.get("displays", [])) for cfg in outputs.get("display_configurations") or []), default=0)
+            max(
+                (len(cfg.get("displays", [])) for cfg in outputs.get("display_configurations") or []),
+                default=0,
+            )
             if outputs.get("display_configurations")
             else 0
         )
@@ -243,19 +246,28 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 add(
                     "Accessory display outputs",
                     "failed",
-                    f"The accessory is a charger and provides 0 display outputs; requested {requested_count} displays.",
+                    (
+                        "The accessory is a charger and provides 0 display outputs; "
+                        f"requested {requested_count} displays."
+                    ),
                 )
             elif is_display:
                 add(
                     "Accessory display outputs",
                     "failed",
-                    f"The accessory is a single display and provides 1 screen; requested {requested_count} displays.",
+                    (
+                        "The accessory is a single display and provides 1 screen; "
+                        f"requested {requested_count} displays."
+                    ),
                 )
             else:
                 add(
                     "Accessory display outputs",
                     "failed",
-                    f"Requested {requested_count} displays; the accessory provides {accessory_display_limit}.",
+                    (
+                        f"Requested {requested_count} displays; "
+                        f"the accessory provides {accessory_display_limit}."
+                    ),
                 )
         else:
             if is_display:
@@ -368,7 +380,8 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                     add(
                         "Accessory combined display mode",
                         "failed",
-                        "The accessory is a single display and cannot support multiple simultaneous displays.",
+                        "The accessory is a single display and cannot support "
+                        "multiple simultaneous displays.",
                     )
                     continue
                 if label == "Laptop" and dp_required is False:

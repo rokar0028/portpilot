@@ -36,7 +36,8 @@ def validate_seed_record(record: dict) -> None:
         for req in required_fields:
             if record.get(req) is None or req not in record.get("evidence", []):
                 raise ValueError(
-                    f"Verified seed record {record.get('id')} lacks required publication field or evidence for: {req}."
+                    f"Verified seed record {record.get('id')} lacks required "
+                    f"publication field or evidence for: {req}."
                 )
 
     evidence_keys = record.get("evidence", [])
@@ -522,11 +523,17 @@ LAPTOPS.extend(
             "review_status": "verified",
             "source_title": "Dell XPS 13 9315 Setup and Specifications",
             "source_url": "https://www.dell.com/support/manuals/en-us/xps-13-9315-laptop/xps-13-9315-setup-and-specifications/",
-            "excerpt": "Two Thunderbolt 4 (USB4) USB Type-C ports with Power Delivery and DisplayPort. Supports up to two 4K displays or one 5K display at 60Hz. Minimum and maximum USB-C Power Delivery input is 45 W.",
+            "excerpt": (
+                "Two Thunderbolt 4 (USB4) USB Type-C ports with Power Delivery and DisplayPort. "
+                "Supports up to two 4K displays or one 5K display at 60Hz. "
+                "Minimum and maximum USB-C Power Delivery input is 45 W."
+            ),
             "evidence_excerpts": {
                 "model_code": "Dell XPS 13 9315 Setup and Specifications.",
                 "operating_system": "Operating systems supported: Windows 11 Home, Windows 11 Pro.",
-                "usb_c_port_count": "Two Thunderbolt 4 (USB4) USB Type-C ports with Power Delivery and DisplayPort.",
+                "usb_c_port_count": (
+                    "Two Thunderbolt 4 (USB4) USB Type-C ports with Power Delivery and DisplayPort."
+                ),
                 "usb_c_data_rate_gbps": "Supports USB4 Gen 3x2 with data transfer rates up to 40 Gbps.",
                 "usb_c_video_supported": "Supports DisplayPort 1.4 output through USB Type-C.",
                 "usb_c_dp_version": "Native DisplayPort 1.4 output over USB-C.",
@@ -535,7 +542,10 @@ LAPTOPS.extend(
                 "maximum_external_displays": "Supports connecting up to two external 4K displays.",
                 "usb_c_max_resolution": "Supports up to 5120 x 2880 at 60 Hz on an external 5K display.",
                 "usb_c_max_refresh_hz": "Supports refresh rate of 60 Hz at maximum external resolution.",
-                "display_configurations": "Supports simultaneous connection of up to two external 4K displays at 60 Hz or two 1080p displays in extended mode over Thunderbolt.",
+                "display_configurations": (
+                    "Supports simultaneous connection of up to two external 4K displays at 60 Hz "
+                    "or two 1080p displays in extended mode over Thunderbolt."
+                ),
             },
             "evidence": [
                 "model_code",
@@ -576,7 +586,14 @@ LAPTOPS.extend(
             "review_status": "verified",
             "source_title": "Apple Support: MacBook Pro (14-inch, Nov 2023) - Technical Specifications",
             "source_url": "https://support.apple.com/en-us/111883",
-            "excerpt": "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort, Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s). HDMI port supporting 4K resolution at 120Hz. Simultaneously supports full native resolution on built-in display and one external display up to 6K at 60Hz. Fast-charge capable with 96W USB-C Power Adapter; 70W USB-C Power Adapter included.",
+            "excerpt": (
+                "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort, "
+                "Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s). "
+                "HDMI port supporting 4K resolution at 120Hz. "
+                "Simultaneously supports full native resolution on built-in display and one external display "
+                "up to 6K at 60Hz. Fast-charge capable with 96W USB-C Power Adapter; "
+                "70W USB-C Power Adapter included."
+            ),
             "evidence_excerpts": {
                 "model_code": "Model number: A2992; Model identifier: Mac15,3.",
                 "operating_system": "macOS is the most advanced desktop operating system in the world.",
@@ -589,9 +606,16 @@ LAPTOPS.extend(
                 "hdmi_version": "HDMI port supports HDMI 2.1 specification.",
                 "hdmi_max_resolution": "HDMI port supports one display with up to 4K resolution at 120Hz.",
                 "hdmi_max_refresh_hz": "HDMI port supports up to 120Hz at 4K resolution.",
-                "maximum_external_displays": "Simultaneously supports full native resolution on built-in display and one external display.",
-                "usb_c_max_resolution": "One external display with up to 6K resolution at 60Hz over Thunderbolt.",
-                "usb_c_max_refresh_hz": "One external display with up to 6K resolution at 60Hz over Thunderbolt.",
+                "maximum_external_displays": (
+                    "Simultaneously supports full native resolution on built-in "
+                    "display and one external display."
+                ),
+                "usb_c_max_resolution": (
+                    "One external display with up to 6K resolution at 60Hz over Thunderbolt."
+                ),
+                "usb_c_max_refresh_hz": (
+                    "One external display with up to 6K resolution at 60Hz over Thunderbolt."
+                ),
             },
             "evidence": [
                 "model_code",
@@ -1199,7 +1223,13 @@ ACCESSORIES.extend(
             "review_status": "verified",
             "source_title": "Lenovo Support: ThinkPad Universal USB-C Dock Overview and Service Parts",
             "source_url": "https://support.lenovo.com/us/en/solutions/pd500519-thinkpad-universal-usb-c-dock-overview-and-service-parts",
-            "excerpt": "ThinkPad Universal USB-C Dock (40AY). Connects via USB-C cable. Requires DisplayPort Alt Mode. Provides 1x HDMI 2.0 port up to 4K@60Hz and 2x DisplayPort 1.4 ports. Supports dual 4K@60Hz displays via DP and HDMI. Delivers up to 65W host power charging with included 90W power adapter. 3x USB 3.2 Gen 2 Type-A ports, Gigabit Ethernet (RJ-45).",
+            "excerpt": (
+                "ThinkPad Universal USB-C Dock (40AY). Connects via USB-C cable. "
+                "Requires DisplayPort Alt Mode. Provides 1x HDMI 2.0 port up to 4K@60Hz "
+                "and 2x DisplayPort 1.4 ports. Supports dual 4K@60Hz displays via DP and HDMI. "
+                "Delivers up to 65W host power charging with included 90W power adapter. "
+                "3x USB 3.2 Gen 2 Type-A ports, Gigabit Ethernet (RJ-45)."
+            ),
             "evidence_excerpts": {
                 "model_code": "Marketing Part Number: 40AY0090US; Machine Type: 40AY.",
                 "category": "Lenovo designates the device as a Universal USB-C Dock.",
@@ -1212,7 +1242,10 @@ ACCESSORIES.extend(
                 "pd_pass_through_max_w": "Delivers up to 65W Power Delivery to attached notebook.",
                 "usb_a_port_count": "3 x USB 3.2 Gen 2 Type-A ports.",
                 "ethernet_max_gbps": "1 x Gigabit Ethernet port (RJ-45, 10/100/1000 Mbps).",
-                "display_configurations": "Supports simultaneous dual external displays up to 3840x2160 at 60Hz across DP and HDMI in extended desktop topology.",
+                "display_configurations": (
+                    "Supports simultaneous dual external displays up to 3840x2160 at 60Hz across "
+                    "DP and HDMI in extended desktop topology."
+                ),
             },
             "evidence": [
                 "model_code",
@@ -1251,12 +1284,18 @@ ACCESSORIES.extend(
             "review_status": "verified",
             "source_title": "ASUS ZenScreen MB166C Portable USB Monitor Tech Specs",
             "source_url": "https://www.asus.com/displays-desktops/monitors/zenscreen/zenscreen-mb166c/techspec/",
-            "excerpt": "ASUS ZenScreen MB166C Portable USB Monitor - 15.6 inch, Full HD (1920x1080), IPS, USB Type-C. Signal Frequency: 60Hz. Input: USB Type-C DisplayPort Alt Mode. Host system requires DisplayPort Alt Mode over USB-C.",
+            "excerpt": (
+                "ASUS ZenScreen MB166C Portable USB Monitor - 15.6 inch, Full HD (1920x1080), IPS, "
+                "USB Type-C. Signal Frequency: 60Hz. Input: USB Type-C DisplayPort Alt Mode. "
+                "Host system requires DisplayPort Alt Mode over USB-C."
+            ),
             "evidence_excerpts": {
                 "model_code": "Model: ZenScreen MB166C.",
                 "category": "ASUS categorizes the product as a Portable USB Monitor.",
                 "host_connection": "Connects via USB Type-C port.",
-                "requires_usb_c_dp_alt_mode": "Video transmission requires host device to support DisplayPort Alt Mode over USB-C.",
+                "requires_usb_c_dp_alt_mode": (
+                    "Video transmission requires host device to support DisplayPort Alt Mode over USB-C."
+                ),
                 "hdmi_port_count": "0 HDMI ports; utilizes USB-C DisplayPort Alt Mode video input.",
                 "hdmi_max_resolution": "Full HD native panel resolution: 1920 x 1080 pixels.",
                 "hdmi_max_refresh_hz": "Signal Frequency / Max Refresh Rate: 60Hz.",
@@ -1279,8 +1318,11 @@ ACCESSORIES.extend(
 next(row for row in ACCESSORIES if row["id"] == "anker-nano-hub-6in1-a83c3")["review_status"] = "needs_review"
 # This listing does not establish a precise manufacturer model code; keep it out of published checks.
 next(row for row in ACCESSORIES if row["id"] == "anker-364-usb-c-hub")["review_status"] = "needs_review"
-# The manufacturer page conflicts between 65W total output and 100W per port; keep out of published checks until clarified.
-next(row for row in ACCESSORIES if row["id"] == "anker-prime-charger-100w-a2343")["review_status"] = "needs_review"
+# The manufacturer page conflicts between 65W total output and 100W per port;
+# keep out of published checks until clarified.
+next(row for row in ACCESSORIES if row["id"] == "anker-prime-charger-100w-a2343")["review_status"] = (
+    "needs_review"
+)
 
 
 def upsert_records(session: Session) -> None:
