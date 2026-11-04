@@ -16,8 +16,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -r requirements-dev.txt
-      - run: ruff check app migrations tests
-      - run: ruff format --check app migrations tests
+      - run: ruff check app migrations tests scripts
+      - run: ruff format --check app migrations tests scripts
       - run: python -m pytest tests -q
 
   frontend:
