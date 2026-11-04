@@ -32,7 +32,8 @@ PortPilot v2.0.0 represents a major milestone, transforming PortPilot from a pro
 
 #### Device Catalogue
 - **Apple MacBook Air 13-inch (M2, 2022) (`A2681`):** Complete verified hardware profile with official Apple citations, 2x Thunderbolt/USB 4 ports, 6K single external display limit, and 30W-67W charging specifications.
-- **Curated Verified Devices:** 16 verified laptops and 15 accessories with exact manufacturer model codes and capability-specific evidence excerpts.
+- **Dell Dock WD19S 130W (`WD19S`):** First verified commercial USB-C dock in the catalogue, featuring 90W Power Delivery (with 130W AC adapter), HDMI 2.0b output up to 4K 60Hz, 3x USB-A 3.1 Gen 1 ports, and Gigabit Ethernet backed by Dell technical documentation.
+- **Curated Verified Devices:** 16 verified laptops and 16 accessories with exact manufacturer model codes and capability-specific evidence excerpts.
 
 #### Accessibility & Frontend
 - **ARIA Live Region Announcements:** Polite live announcements for setup interpretation progress, check completion verdicts, and status updates (`.sr-only[role="status"][aria-live="polite"]`).

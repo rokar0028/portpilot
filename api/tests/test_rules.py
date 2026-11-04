@@ -432,3 +432,142 @@ def test_apple_macbook_air_m2_undervoltage_charger_fails_minimum_power() -> None
     failed_req = next(item for item in result["requirements"] if item["name"] == "Charging")
     assert failed_req["status"] == "failed"
     assert "below the laptop's documented minimum input of 30 W" in failed_req["detail"]
+
+
+def test_dell_wd19s_dock_with_macbook_air_m2_single_display() -> None:
+    from app.main import accessory_rule_record, laptop_rule_record
+    from app.models import AccessoryModel, LaptopModel
+    from app.seed import ACCESSORIES, LAPTOPS
+
+    m2_data = next(entry for entry in LAPTOPS if entry["id"] == "apple-macbook-air-m2-2022-a2681")
+    dock_data = next(entry for entry in ACCESSORIES if entry["id"] == "dell-dock-wd19s-130w")
+
+    m2_model = LaptopModel(
+        **{
+            k: v
+            for k, v in m2_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    dock_model = AccessoryModel(
+        **{
+            k: v
+            for k, v in dock_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+
+    laptop = laptop_rule_record(m2_model)
+    accessory = accessory_rule_record(dock_model)
+
+    result = check(
+        laptop,
+        accessory,
+        external_displays=1,
+        resolution="3840x2160",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
+    assert result["verdict"] == "compatible"
+    assert result["limits"] == []
+    for req in result["requirements"]:
+        assert req["status"] == "passed"
+
+
+def test_dell_wd19s_dock_display_count_limit_with_ideapad() -> None:
+    from app.main import accessory_rule_record, laptop_rule_record
+    from app.models import AccessoryModel, LaptopModel
+    from app.seed import ACCESSORIES, LAPTOPS
+
+    ideapad_data = next(entry for entry in LAPTOPS if entry["id"] == "lenovo-ideapad-slim-3-14irh10r")
+    dock_data = next(entry for entry in ACCESSORIES if entry["id"] == "dell-dock-wd19s-130w")
+
+    ideapad_model = LaptopModel(
+        **{
+            k: v
+            for k, v in ideapad_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    dock_model = AccessoryModel(
+        **{
+            k: v
+            for k, v in dock_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+
+    laptop = laptop_rule_record(ideapad_model)
+    accessory = accessory_rule_record(dock_model)
+
+    # 1 display: compatible
+    res_single = check(
+        laptop,
+        accessory,
+        external_displays=1,
+        resolution="3840x2160",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
+    assert res_single["verdict"] == "compatible"
+
+    # 2 displays: accessory only has 1 display output
+    res_dual = check(
+        laptop,
+        accessory,
+        external_displays=2,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
+    assert res_dual["verdict"] == "incompatible"
+    failed_req = next(
+        item for item in res_dual["requirements"] if item["name"] == "Accessory display outputs"
+    )
+    assert failed_req["status"] == "failed"
+    assert "Requested 2 displays; the accessory provides 1" in failed_req["detail"]
+
+
+def test_dell_wd19s_dock_requires_usb_c_dp_alt_mode() -> None:
+    from app.main import accessory_rule_record
+    from app.models import AccessoryModel
+    from app.seed import ACCESSORIES
+
+    dock_data = next(entry for entry in ACCESSORIES if entry["id"] == "dell-dock-wd19s-130w")
+    dock_model = AccessoryModel(
+        **{
+            k: v
+            for k, v in dock_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    accessory = accessory_rule_record(dock_model)
+
+    # Laptop lacking DP Alt mode on USB-C
+    no_video_laptop = {
+        "ports": {
+            "usb_c_port_count": 1,
+            "usb_c_video_supported": False,
+            "usb_c_pd_input_min_w": 45,
+            "usb_c_pd_input_max_w": 65,
+            "maximum_external_displays": 0,
+            "usb_c_max_resolution": None,
+            "usb_c_max_refresh_hz": None,
+            "hdmi_max_resolution": None,
+            "hdmi_max_refresh_hz": None,
+        },
+        "evidence": [],
+    }
+
+    result = check(
+        no_video_laptop,
+        accessory,
+        external_displays=1,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        laptop_charging=False,
+    )
+    assert result["verdict"] == "incompatible"
+    failed_req = next(item for item in result["requirements"] if item["name"] == "USB-C video")
+    assert failed_req["status"] == "failed"
+    assert "The accessory requires USB-C video" in failed_req["detail"]

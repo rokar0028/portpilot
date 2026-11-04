@@ -961,6 +961,65 @@ ACCESSORIES.extend(
                 "usb_c_output_max_w": "Maximum USB-C output is 65W.",
             },
         ),
+        {
+            "id": "dell-dock-wd19s-130w",
+            "brand": "Dell",
+            "name": "Dell Dock WD19S 130W",
+            "model_code": "WD19S",
+            "category": "usb_c_dock",
+            "host_connection": "USB-C",
+            "requires_usb_c_dp_alt_mode": True,
+            "hdmi_port_count": 1,
+            "hdmi_max_resolution": "3840x2160",
+            "hdmi_max_refresh_hz": 60,
+            "pd_input_max_w": 130,
+            "pd_pass_through_max_w": 90,
+            "usb_c_output_max_w": None,
+            "usb_a_port_count": 3,
+            "ethernet_max_gbps": 1,
+            "review_status": "verified",
+            "source_title": "Dell Dock WD19S User Guide and Specifications",
+            "source_url": (
+                "https://www.dell.com/support/home/en-us/product-support/product/dell-wd19s-130w-dock/docs"
+            ),
+            "excerpt": (
+                "Dell Dock WD19S links your notebook to monitors, peripherals, and network via a single "
+                "USB-C cable. Supports USB-C DisplayPort Alt Mode, HDMI 2.0b, up to 90W Power Delivery with "
+                "130W adapter, 3x USB 3.1 Gen 1, and Gigabit Ethernet."
+            ),
+            "evidence_excerpts": {
+                "model_code": (
+                    "Regulatory Model: K20A; Regulatory Type: K20A001; Commercial Model: WD19S 130W."
+                ),
+                "category": "Dell Commercial Docking Station: WD19S USB-C Dock.",
+                "host_connection": "Connects to host system through integrated USB-C cable.",
+                "requires_usb_c_dp_alt_mode": (
+                    "Host system requires DisplayPort over USB-C (DisplayPort 1.4 or 1.2 Alt Mode) for video."
+                ),
+                "hdmi_port_count": "1 x Full Size HDMI 2.0b port.",
+                "hdmi_max_resolution": "HDMI 2.0b port supports display resolution up to 4K (3840 x 2160).",
+                "hdmi_max_refresh_hz": "HDMI output supports refresh rate up to 60Hz at 4K.",
+                "pd_input_max_w": "Operates with Dell 130W AC power adapter.",
+                "pd_pass_through_max_w": (
+                    "Delivers up to 90W Power Delivery to Dell and non-Dell USB-C systems."
+                ),
+                "usb_a_port_count": "3 x USB 3.1 Gen 1 Type-A ports (one with PowerShare).",
+                "ethernet_max_gbps": "1 x Gigabit Ethernet port (RJ45, 10/100/1000 Mbps).",
+            },
+            "evidence": [
+                "model_code",
+                "category",
+                "host_connection",
+                "requires_usb_c_dp_alt_mode",
+                "hdmi_port_count",
+                "hdmi_max_resolution",
+                "hdmi_max_refresh_hz",
+                "pd_input_max_w",
+                "pd_pass_through_max_w",
+                "usb_a_port_count",
+                "ethernet_max_gbps",
+            ],
+        },
     ]
 )
 
