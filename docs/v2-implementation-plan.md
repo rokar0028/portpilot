@@ -121,7 +121,7 @@ Establish the shared baseline that lets the other workstreams land without dupli
 - [x] Deploy candidates to an isolated preview environment with separate database/resources from production or shared environments (tooling and playbook established; local preview rehearsed).
 - [x] Verify the deployed preview end to end, including readiness, catalogue loading, representative checks, sharing behavior, and error paths (automated `verify_preview_deployment.py` verified).
 - [x] Complete release checks for migrations, secrets/configuration, accessibility, mobile behavior, monitoring, and rollback before making a release public (the 8 technical gates codified in [Preview and release playbook](preview-and-release-playbook.md)).
-- [x] Record the candidate revision, preview URL/environment, checks performed, findings, and release decision (`docs/release-candidate-template.md` and evaluation run artifacts established).
+- [x] Record the candidate revision, preview URL/environment, checks performed, findings, and release decision (`docs/release-candidate-template.md` and evaluation record archived in [`docs/reports/release-candidate-v2.0.0-rc1.md`](reports/release-candidate-v2.0.0-rc1.md)).
 
 **Completion criteria:** the release checklist is complete against an isolated preview, verified using the automated preview verification suite, and the deployment can be rolled back using the documented procedure. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
 

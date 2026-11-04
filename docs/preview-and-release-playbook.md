@@ -143,7 +143,7 @@ The script exits with code `0` on a complete pass or code `1` if any critical ga
 
 ## 4. Go / No-Go Decision Framework
 
-Record all findings in a copy of [`docs/release-candidate-template.md`](release-candidate-template.md).
+Record all findings in a copy of [`docs/release-candidate-template.md`](release-candidate-template.md) and archive the completed record and artifacts in `docs/reports/` (e.g. [`docs/reports/release-candidate-v2.0.0-rc1.md`](reports/release-candidate-v2.0.0-rc1.md)).
 
 ### Hard Blocker Criteria (Mandatory NO-GO):
 - Any failure in Gates 1, 2, 4, or 5.

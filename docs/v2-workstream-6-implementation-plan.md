@@ -57,6 +57,7 @@ This plan supports [Workstream 6 in the V2 plan](v2-implementation-plan.md#6-acc
 | Date | Screen reader | Browser | Operating system | Scenarios | Findings and fixes |
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-03 | Not applicable; automated browser run | Playwright 1.64.1, Chromium 156.0.8078.4 | Windows 10 Pro 25H2, build 26200.9711 | Empty checker, parsed setup review, supported result, check error, coverage, 360px keyboard navigation | Found three result-state contrast issues and corrected text colors. Corrected stale test label locators. Final result: 4/4 tests passed. This is not a manual screen-reader pass. |
+| 2026-11-04 | Not applicable; cross-browser automated verification | Playwright 1.64.1 (Chromium, Firefox, WebKit) | Windows 10 Pro 25H2, build 26200.9711 | 12/12 cross-browser accessibility checks: WCAG 2.1 A/AA, 360px keyboard reachability, concise live region announcements | Fixed `playwright.config.ts` Windows venv binary path and `FRONTEND_ORIGIN` CORS propagation. All 12 tests passed across all 3 engines. |
 
 ## Manual review record
 

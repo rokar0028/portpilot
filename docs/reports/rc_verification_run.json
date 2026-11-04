@@ -1,0 +1,121 @@
+{
+  "timestamp": "2026-11-03T13:24:49.858763+00:00",
+  "api_url": "http://127.0.0.1:8001",
+  "web_url": "http://127.0.0.1:3000",
+  "total_checks": 12,
+  "passed_checks": 11,
+  "failed_checks": 0,
+  "skipped_checks": 1,
+  "overall_status": "PASS",
+  "results": [
+    {
+      "name": "API Liveness Check (GET /health)",
+      "category": "Liveness & Readiness",
+      "status": "PASS",
+      "duration_ms": 28.73,
+      "details": "API responded status: ok",
+      "diagnostics": {}
+    },
+    {
+      "name": "Database Readiness Check (GET /ready)",
+      "category": "Liveness & Readiness",
+      "status": "PASS",
+      "duration_ms": 25.47,
+      "details": "Database connectivity confirmed status: ready",
+      "diagnostics": {}
+    },
+    {
+      "name": "Catalogue Data Integrity & Filtering (GET /devices)",
+      "category": "Catalogue Integrity",
+      "status": "PASS",
+      "duration_ms": 64.08,
+      "details": "Verified 15 laptops and 13 accessories. Zero leaks detected.",
+      "diagnostics": {
+        "laptop_count": 15,
+        "accessory_count": 13
+      }
+    },
+    {
+      "name": "Device Details & Evidence (GET /devices/{category}/{id})",
+      "category": "Catalogue Integrity",
+      "status": "PASS",
+      "duration_ms": 27.14,
+      "details": "Fetched laptop 'lenovo-ideapad-slim-3-14irh10r' and accessory 'anker-555-usb-c-hub' details with valid schema structure.",
+      "diagnostics": {}
+    },
+    {
+      "name": "Deterministic Compatibility Evaluation (POST /checks)",
+      "category": "Compatibility Rules",
+      "status": "PASS",
+      "duration_ms": 36.48,
+      "details": "Evaluated lenovo-ideapad-slim-3-14irh10r + anker-555-usb-c-hub -> 'insufficient_data' (engine: 0.3.0)",
+      "diagnostics": {
+        "verdict": "insufficient_data",
+        "rule_engine_version": "0.3.0",
+        "evidence_count": 23
+      }
+    },
+    {
+      "name": "Simultaneous Multi-Display Evaluation (POST /checks)",
+      "category": "Compatibility Rules",
+      "status": "PASS",
+      "duration_ms": 15.03,
+      "details": "Dual-display check evaluated successfully with verdict: 'incompatible' and explicit limits.",
+      "diagnostics": {
+        "verdict": "incompatible",
+        "limits_count": 0
+      }
+    },
+    {
+      "name": "Share Link Query Parameter Contract",
+      "category": "Shared Links",
+      "status": "PASS",
+      "duration_ms": 0.05,
+      "details": "Share URL parameters '?laptop=lenovo-ideapad-slim-3-14irh10r&accessory=anker-555-usb-c-hub' conform to Next.js query parameter restoration spec.",
+      "diagnostics": {}
+    },
+    {
+      "name": "Result Report Ingestion (POST /result-reports)",
+      "category": "Reporting & Ingestion",
+      "status": "PASS",
+      "duration_ms": 27.14,
+      "details": "Successfully ingested low-data result report (report id: report-c87dd35fc41749cbab10dd34eaed73e4).",
+      "diagnostics": {
+        "report_id": "report-c87dd35fc41749cbab10dd34eaed73e4",
+        "status": "received"
+      }
+    },
+    {
+      "name": "AI Setup Parser Endpoint (POST /setup-requests/parse)",
+      "category": "Setup Parser",
+      "status": "SKIP",
+      "duration_ms": 25.96,
+      "details": "External provider offline (Provider unavailable in preview (HTTP 503): {'detail': {'code': 'setup_parser_unavailable', 'message': 'Setup parsing is not configured. Use the manual setup fields.'}}). Deterministic checks remain unblocked.",
+      "diagnostics": {}
+    },
+    {
+      "name": "Observability & Duration Distributions (GET /metrics)",
+      "category": "Observability & Metrics",
+      "status": "PASS",
+      "duration_ms": 28.37,
+      "details": "Exposed Prometheus request counters and duration histograms without credential leaks.",
+      "diagnostics": {}
+    },
+    {
+      "name": "Frontend Shell Rendering (GET /)",
+      "category": "Frontend Smoke",
+      "status": "PASS",
+      "duration_ms": 32.71,
+      "details": "Web service returned valid HTML application shell.",
+      "diagnostics": {}
+    },
+    {
+      "name": "Frontend Coverage Page (GET /coverage)",
+      "category": "Frontend Smoke",
+      "status": "PASS",
+      "duration_ms": 45.9,
+      "details": "Coverage page rendered successfully with live catalogue references.",
+      "diagnostics": {}
+    }
+  ]
+}
