@@ -314,3 +314,121 @@ def test_multi_display_modes_without_host_dp_reports_unmodeled_alternate_video_p
         "The request specifies a display count but not each simultaneous mode" in item["detail"]
         for item in result["requirements"]
     )
+
+
+def test_apple_macbook_air_m2_single_display_and_pass_through_charging() -> None:
+    from app.main import accessory_rule_record, laptop_rule_record
+    from app.models import AccessoryModel, LaptopModel
+    from app.seed import ACCESSORIES, LAPTOPS
+
+    m2_data = next(entry for entry in LAPTOPS if entry["id"] == "apple-macbook-air-m2-2022-a2681")
+    hub_data = next(entry for entry in ACCESSORIES if entry["id"] == "ugreen-revodok-pro-106-45363")
+
+    m2_model = LaptopModel(
+        **{
+            k: v
+            for k, v in m2_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    hub_model = AccessoryModel(
+        **{
+            k: v
+            for k, v in hub_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+
+    laptop = laptop_rule_record(m2_model)
+    accessory = accessory_rule_record(hub_model)
+
+    result = check(
+        laptop,
+        accessory,
+        external_displays=1,
+        resolution="3840x2160",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
+    assert result["verdict"] == "compatible"
+    passed_names = {item["name"] for item in result["requirements"] if item["status"] == "passed"}
+    assert {"Physical connection", "USB-C video", "Display count", "Charging"} <= passed_names
+
+
+def test_apple_macbook_air_m2_dual_display_exceeds_hardware_limit() -> None:
+    from app.main import accessory_rule_record, laptop_rule_record
+    from app.models import AccessoryModel, LaptopModel
+    from app.seed import ACCESSORIES, LAPTOPS
+
+    m2_data = next(entry for entry in LAPTOPS if entry["id"] == "apple-macbook-air-m2-2022-a2681")
+    hub_data = next(entry for entry in ACCESSORIES if entry["id"] == "ugreen-revodok-pro-106-45363")
+
+    m2_model = LaptopModel(
+        **{
+            k: v
+            for k, v in m2_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    hub_model = AccessoryModel(
+        **{
+            k: v
+            for k, v in hub_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+
+    laptop = laptop_rule_record(m2_model)
+    accessory = accessory_rule_record(hub_model)
+
+    result = check(
+        laptop,
+        accessory,
+        external_displays=2,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        laptop_charging=True,
+    )
+    assert result["verdict"] == "incompatible"
+    failed_req = next(item for item in result["requirements"] if item["name"] == "Display count")
+    assert failed_req["status"] == "failed"
+    assert "Requested 2 displays; the laptop supports up to 1" in failed_req["detail"]
+
+
+def test_apple_macbook_air_m2_undervoltage_charger_fails_minimum_power() -> None:
+    from app.main import laptop_rule_record
+    from app.models import LaptopModel
+    from app.seed import LAPTOPS
+
+    m2_data = next(entry for entry in LAPTOPS if entry["id"] == "apple-macbook-air-m2-2022-a2681")
+    m2_model = LaptopModel(
+        **{
+            k: v
+            for k, v in m2_data.items()
+            if k not in {"source_title", "source_url", "excerpt", "evidence", "evidence_excerpts"}
+        }
+    )
+    laptop = laptop_rule_record(m2_model)
+
+    weak_charger = {
+        "host_connection": "USB-C",
+        "requirements": {"host_usb_c_video": False},
+        "outputs": {
+            "display_count": 0,
+            "hdmi_max_resolution": None,
+            "hdmi_max_refresh_hz": None,
+            "charging_output_watts": 18,
+        },
+        "evidence": [],
+    }
+
+    result = check(
+        laptop,
+        weak_charger,
+        external_displays=0,
+        laptop_charging=True,
+    )
+    assert result["verdict"] == "incompatible"
+    failed_req = next(item for item in result["requirements"] if item["name"] == "Charging")
+    assert failed_req["status"] == "failed"
+    assert "below the laptop's documented minimum input of 30 W" in failed_req["detail"]

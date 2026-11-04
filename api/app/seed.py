@@ -416,6 +416,67 @@ LAPTOPS.extend(
             "2x USB-C ports with USB PD 65-100W and DisplayPort 1.2.",
             "1.2",
         ),
+        {
+            "id": "apple-macbook-air-m2-2022-a2681",
+            "brand": "Apple",
+            "name": "MacBook Air 13-inch (M2, 2022)",
+            "model_code": "A2681",
+            "region_variant": None,
+            "hardware_revision": None,
+            "operating_system": "macOS",
+            "usb_c_port_count": 2,
+            "usb_c_data_rate_gbps": 40,
+            "usb_c_video_supported": True,
+            "usb_c_dp_version": "1.4",
+            "usb_c_pd_input_min_w": 30,
+            "usb_c_pd_input_max_w": 67,
+            "hdmi_version": None,
+            "hdmi_max_resolution": None,
+            "hdmi_max_refresh_hz": None,
+            "maximum_external_displays": 1,
+            "usb_c_max_resolution": "6016x3384",
+            "usb_c_max_refresh_hz": 60,
+            "review_status": "verified",
+            "source_title": "Apple Support: MacBook Air (M2, 2022) - Technical Specifications",
+            "source_url": "https://support.apple.com/en-us/111867",
+            "excerpt": (
+                "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort, "
+                "Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s). Simultaneously supports "
+                "full native resolution on the built-in display and one external display "
+                "with up to 6K resolution at 60Hz."
+            ),
+            "evidence_excerpts": {
+                "model_code": "Model Number: A2681; Model Identifier: Mac14,2.",
+                "operating_system": "macOS is the most advanced desktop operating system in the world.",
+                "usb_c_port_count": "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort.",
+                "usb_c_data_rate_gbps": (
+                    "Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s), USB 3.1 Gen 2 (up to 10Gb/s)."
+                ),
+                "usb_c_video_supported": "DisplayPort native output over USB-C.",
+                "usb_c_dp_version": "Native DisplayPort 1.4 output over USB-C.",
+                "usb_c_pd_input_min_w": "30W USB-C Power Adapter (included with base 8-core GPU model).",
+                "usb_c_pd_input_max_w": "Fast-charge capable with 67W USB-C Power Adapter.",
+                "maximum_external_displays": (
+                    "Simultaneously supports full native resolution on the built-in display at 1 billion "
+                    "colors and one external display with up to 6K resolution at 60Hz."
+                ),
+                "usb_c_max_resolution": "One external display with up to 6K resolution at 60Hz.",
+                "usb_c_max_refresh_hz": "One external display with up to 6K resolution at 60Hz.",
+            },
+            "evidence": [
+                "model_code",
+                "operating_system",
+                "usb_c_port_count",
+                "usb_c_data_rate_gbps",
+                "usb_c_video_supported",
+                "usb_c_dp_version",
+                "usb_c_pd_input_min_w",
+                "usb_c_pd_input_max_w",
+                "maximum_external_displays",
+                "usb_c_max_resolution",
+                "usb_c_max_refresh_hz",
+            ],
+        },
     ]
 )
 

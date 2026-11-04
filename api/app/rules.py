@@ -23,7 +23,14 @@ def _mode_at_least(
 
     def dimensions(value: str) -> tuple[int, int] | None:
         normalized = value.strip().lower()
-        aliases = {"4k": "3840x2160", "uhd": "3840x2160", "1080p": "1920x1080", "1440p": "2560x1440"}
+        aliases = {
+            "4k": "3840x2160",
+            "uhd": "3840x2160",
+            "1080p": "1920x1080",
+            "1440p": "2560x1440",
+            "5k": "5120x2880",
+            "6k": "6016x3384",
+        }
         match = re.fullmatch(r"(\d{3,5})x(\d{3,5})", aliases.get(normalized, normalized))
         return (int(match.group(1)), int(match.group(2))) if match else None
 
@@ -49,7 +56,14 @@ def _configuration_match(
             resolution, refresh = mode.resolution, mode.refresh_rate_hz
             connection = mode.connection
         normalized = str(resolution).strip().lower()
-        aliases = {"4k": "3840x2160", "uhd": "3840x2160", "1080p": "1920x1080", "1440p": "2560x1440"}
+        aliases = {
+            "4k": "3840x2160",
+            "uhd": "3840x2160",
+            "1080p": "1920x1080",
+            "1440p": "2560x1440",
+            "5k": "5120x2880",
+            "6k": "6016x3384",
+        }
         return (
             aliases.get(normalized, normalized),
             int(refresh),
