@@ -8,7 +8,7 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 - Accessory: Anker Nano Hub (7-in-1, A83D2)
 - Setup: one 1080p external display plus laptop charging
 
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 18 laptops and 15 accessories; three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
+The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 19 laptops and 17 accessories; three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
 
 The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check using the current catalogue and rules; the URL does not preserve the original result as a snapshot. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 
@@ -178,7 +178,7 @@ flowchart LR
 - The Python rules engine calculates every verdict. It does not infer device specifications; missing required values produce **Insufficient data**.
 - Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow and protected admin API require evidence for populated published fields.
 - PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
-- The verified catalogue currently contains 18 laptops and 15 accessories: USB-C hubs, USB-C docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
+- The verified catalogue currently contains 19 laptops and 17 accessories: USB-C hubs, USB-C docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
 - The evaluator test suite in `tests/test_rules.py` covers 72 distinct compatibility scenarios. The complete API test suite passes 129 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the production build also pass.
 
 The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, and protocol fidelity rules are complete.

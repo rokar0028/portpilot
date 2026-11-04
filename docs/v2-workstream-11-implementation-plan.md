@@ -66,10 +66,15 @@ In real-world computing, general-purpose LLMs and e-commerce listings produce fr
 - [x] Update capability registry (`api/app/capabilities.py`) and `main.py` rule record adapters to keep registry validation clean.
 - [x] Expand unit test suite with 5 new targeted test cases in `api/tests/test_rules.py` (total 129 tests passing).
 - [x] Maintain 0 lint/format violations across Python (`ruff check`, `ruff format`) and Next.js (`eslint`, `prettier`, `next build`).
+- [x] Expand verified catalogue with manufacturer-evidenced high-impact models:
+  - Apple MacBook Air 13-inch (M2, Model A2681) capturing the 1 external display hardware limit.
+  - Dell WD19S 130W USB-C Dock (Model K20A001) capturing DP 1.4, multi-display MST configurations, and 90W Dell / 65W generic PD.
+  - Anker 555 USB-C Hub (8-in-1, Model A8383) capturing 100W PD input, 85W pass-through with 15W internal reservation, and 4K@60Hz HDMI.
 
 ## Acceptance criteria
 
 - [x] macOS multi-display setups over standard USB-C DP Alt Mode correctly evaluate to `compatible_with_limits` (mirrored only) or `incompatible` for extended desktop requests.
 - [x] Power delivery pass-through calculations account for accessory power draw overhead against laptop minimum required wattage.
+- [x] Seeded high-impact, evidence-backed device models with verified manufacturer excerpts (19 laptops, 17 verified accessories).
 - [x] All unit, integration, and build checks pass without regressions (129 pytest tests, clean Next.js build).
 - [x] API code passes `ruff check` and `ruff format --check` cleanly with 0 errors.

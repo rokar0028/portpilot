@@ -634,6 +634,68 @@ LAPTOPS.extend(
                 "usb_c_max_refresh_hz",
             ],
         },
+        {
+            "id": "apple-macbook-air-13-m2-2022-a2681",
+            "brand": "Apple",
+            "name": "MacBook Air 13-inch (M2, 2022)",
+            "model_code": "A2681",
+            "region_variant": None,
+            "hardware_revision": None,
+            "operating_system": "macOS",
+            "usb_c_port_count": 2,
+            "usb_c_data_rate_gbps": 40,
+            "usb_c_video_supported": True,
+            "usb_c_dp_version": "1.4",
+            "usb_c_pd_input_min_w": 30,
+            "usb_c_pd_input_max_w": 67,
+            "hdmi_version": None,
+            "hdmi_max_resolution": None,
+            "hdmi_max_refresh_hz": None,
+            "maximum_external_displays": 1,
+            "usb_c_max_resolution": "6016x3384",
+            "usb_c_max_refresh_hz": 60,
+            "display_configurations": None,
+            "review_status": "verified",
+            "source_title": "Apple Support: MacBook Air (13-inch, M2, 2022) - Technical Specifications",
+            "source_url": "https://support.apple.com/en-us/111867",
+            "excerpt": (
+                "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort, "
+                "Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s). "
+                "Simultaneously supports full native resolution on the built-in display at 1 billion colors "
+                "and one external display with up to 6K resolution at 60Hz. "
+                "30W USB-C Power Adapter included with base model; "
+                "fast-charge capable with 67W USB-C Power Adapter."
+            ),
+            "evidence_excerpts": {
+                "model_code": "Model number: A2681; Model identifier: Mac14,2.",
+                "operating_system": "macOS operating system.",
+                "usb_c_port_count": "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort.",
+                "usb_c_data_rate_gbps": "Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s).",
+                "usb_c_video_supported": "DisplayPort native output over USB-C.",
+                "usb_c_dp_version": "Native DisplayPort 1.4 output over USB-C.",
+                "usb_c_pd_input_min_w": "30W USB-C Power Adapter included with 8-core GPU model.",
+                "usb_c_pd_input_max_w": "Fast-charge capable with 67W USB-C Power Adapter.",
+                "maximum_external_displays": (
+                    "Simultaneously supports full native resolution on the built-in display and "
+                    "one external display with up to 6K resolution at 60Hz."
+                ),
+                "usb_c_max_resolution": "Supports one external display with up to 6K (6016x3384) resolution.",
+                "usb_c_max_refresh_hz": "Supports refresh rate of 60Hz at up to 6K resolution.",
+            },
+            "evidence": [
+                "model_code",
+                "operating_system",
+                "usb_c_port_count",
+                "usb_c_data_rate_gbps",
+                "usb_c_video_supported",
+                "usb_c_dp_version",
+                "usb_c_pd_input_min_w",
+                "usb_c_pd_input_max_w",
+                "maximum_external_displays",
+                "usb_c_max_resolution",
+                "usb_c_max_refresh_hz",
+            ],
+        },
     ]
 )
 
@@ -1308,6 +1370,143 @@ ACCESSORIES.extend(
                 "hdmi_port_count",
                 "hdmi_max_resolution",
                 "hdmi_max_refresh_hz",
+            ],
+        },
+        {
+            "id": "dell-wd19s-130w-dock",
+            "brand": "Dell",
+            "name": "Dell WD19S 130W USB-C Dock",
+            "model_code": "K20A001",
+            "region_variant": None,
+            "hardware_revision": None,
+            "category": "usb_c_dock",
+            "host_connection": "USB-C",
+            "requires_usb_c_dp_alt_mode": True,
+            "hdmi_port_count": 1,
+            "hdmi_max_resolution": "3840x2160",
+            "hdmi_max_refresh_hz": 60,
+            "pd_input_max_w": 130,
+            "pd_pass_through_max_w": 90,
+            "usb_c_output_max_w": None,
+            "usb_a_port_count": 3,
+            "ethernet_max_gbps": 1,
+            "display_configurations": [
+                {
+                    "displays": [
+                        {"resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "DisplayPort"},
+                        {"resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "HDMI"},
+                    ],
+                    "topology": "extended",
+                },
+                {
+                    "displays": [
+                        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "DisplayPort"},
+                        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "HDMI"},
+                    ],
+                    "topology": "extended",
+                },
+            ],
+            "review_status": "verified",
+            "source_title": "Dell WD19S Docking Station User Guide and Specifications",
+            "source_url": "https://www.dell.com/support/manuals/en-us/dell-wd19s-130w-dock/wd19s_user_guide/",
+            "excerpt": (
+                "Dell Docking Station WD19S (Regulatory Model: K20A001). "
+                "Connects via attached USB Type-C cable. "
+                "Requires DisplayPort over USB Type-C host support. 1x HDMI 2.0b, 2x DisplayPort 1.4. "
+                "Supports dual 4K displays at 60Hz or dual FHD displays in extended desktop mode. "
+                "Powered by 130W AC adapter, delivering up to 90W Power Delivery to Dell laptops and 65W to "
+                "non-Dell laptops. 3x USB 3.1 Gen 1 Type-A, 1x Gigabit Ethernet (RJ-45)."
+            ),
+            "evidence_excerpts": {
+                "model_code": "Regulatory Model: K20A; Regulatory Type: K20A001.",
+                "category": "Dell identifies device as Dell Docking Station WD19S.",
+                "host_connection": "Connects to host system via attached USB Type-C cable.",
+                "requires_usb_c_dp_alt_mode": (
+                    "Host system requires DisplayPort Alternate Mode over USB Type-C."
+                ),
+                "hdmi_port_count": "One HDMI 2.0b port.",
+                "hdmi_max_resolution": "HDMI 2.0b supports maximum resolution of 3840 x 2160 (4K).",
+                "hdmi_max_refresh_hz": "Supports refresh rate up to 60Hz at 4K resolution.",
+                "pd_input_max_w": "Powered by 130W AC power adapter.",
+                "pd_pass_through_max_w": (
+                    "Delivers up to 90W power to Dell systems and 65W to non-Dell systems."
+                ),
+                "usb_a_port_count": "Three USB 3.1 Gen 1 Type-A ports.",
+                "ethernet_max_gbps": "One Gigabit Ethernet port (RJ-45, 1 Gbps).",
+                "display_configurations": (
+                    "Supports dual external displays up to 3840x2160 at 60Hz or 1920x1080 at 60Hz "
+                    "in extended mode."
+                ),
+            },
+            "evidence": [
+                "model_code",
+                "category",
+                "host_connection",
+                "requires_usb_c_dp_alt_mode",
+                "hdmi_port_count",
+                "hdmi_max_resolution",
+                "hdmi_max_refresh_hz",
+                "pd_input_max_w",
+                "pd_pass_through_max_w",
+                "usb_a_port_count",
+                "ethernet_max_gbps",
+                "display_configurations",
+            ],
+        },
+        {
+            "id": "anker-555-hub-8in1-a8383",
+            "brand": "Anker",
+            "name": "Anker 555 USB-C Hub (8-in-1)",
+            "model_code": "A8383",
+            "region_variant": None,
+            "hardware_revision": None,
+            "category": "usb_c_hub",
+            "host_connection": "USB-C",
+            "requires_usb_c_dp_alt_mode": True,
+            "hdmi_port_count": 1,
+            "hdmi_max_resolution": "3840x2160",
+            "hdmi_max_refresh_hz": 60,
+            "pd_input_max_w": 100,
+            "pd_pass_through_max_w": 85,
+            "usb_c_output_max_w": None,
+            "usb_a_port_count": 2,
+            "ethernet_max_gbps": 1,
+            "display_configurations": None,
+            "review_status": "verified",
+            "source_title": "Anker 555 USB-C Hub (8-in-1) Technical Specifications",
+            "source_url": "https://www.anker.com/products/a8383",
+            "excerpt": (
+                "Anker 555 USB-C Hub (8-in-1), Model A8383. Connects via USB-C. "
+                "HDMI port supports up to 4K@60Hz (requires host support for DP 1.4). "
+                "Supports up to 100W Power Delivery input, providing up to 85W high-speed pass-through "
+                "charging while reserving 15W for hub operation. "
+                "2x USB-A 3.2 Gen 2 ports (10 Gbps), Gigabit Ethernet."
+            ),
+            "evidence_excerpts": {
+                "model_code": "Model number: A8383.",
+                "category": "Anker classifies device as an 8-in-1 USB-C Hub.",
+                "host_connection": "Connects to host device through built-in USB-C cable.",
+                "requires_usb_c_dp_alt_mode": "Requires host device with USB-C DisplayPort Alt Mode.",
+                "hdmi_port_count": "1 x HDMI port.",
+                "hdmi_max_resolution": "HDMI port supports resolution up to 4K (3840 x 2160).",
+                "hdmi_max_refresh_hz": "Supports refresh rate of 60Hz at 4K resolution.",
+                "pd_input_max_w": "Supports up to 100W Power Delivery input.",
+                "pd_pass_through_max_w": "Provides up to 85W pass-through charging to the connected laptop.",
+                "usb_a_port_count": "2 x USB-A 3.2 Gen 2 data ports.",
+                "ethernet_max_gbps": "1 x Gigabit Ethernet port (1 Gbps).",
+            },
+            "evidence": [
+                "model_code",
+                "category",
+                "host_connection",
+                "requires_usb_c_dp_alt_mode",
+                "hdmi_port_count",
+                "hdmi_max_resolution",
+                "hdmi_max_refresh_hz",
+                "pd_input_max_w",
+                "pd_pass_through_max_w",
+                "usb_a_port_count",
+                "ethernet_max_gbps",
             ],
         },
     ]
