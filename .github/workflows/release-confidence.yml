@@ -93,6 +93,59 @@ jobs:
       - name: Build standalone frontend
         working-directory: web
         run: npm run build:e2e
+      - name: Start preview API service
+        working-directory: api
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 18000 > /tmp/portpilot-api.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent "$PORTPILOT_E2E_API_URL/ready" > /dev/null; then
+              echo "API preview service ready on port 18000."
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              echo "API preview service failed to start on port 18000."
+              cat /tmp/portpilot-api.log || true
+              exit 1
+            fi
+            sleep 1
+          done
+      - name: Start preview frontend service
+        working-directory: web
+        run: |
+          PORTPILOT_E2E_DIST_DIR=.next-e2e HOSTNAME=127.0.0.1 PORT=13000 NEXT_PUBLIC_API_URL="$PORTPILOT_E2E_API_URL" nohup node node_modules/next/dist/bin/next start > /tmp/portpilot-web.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent "$PORTPILOT_E2E_WEB_URL" > /dev/null; then
+              echo "Frontend preview service ready on port 13000."
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              echo "Frontend preview service failed to start on port 13000."
+              cat /tmp/portpilot-web.log || true
+              exit 1
+            fi
+            sleep 1
+          done
+      - name: Verify preview deployment technical gates
+        run: |
+          python api/scripts/verify_preview_deployment.py \
+            --api-url "$PORTPILOT_E2E_API_URL" \
+            --web-url "$PORTPILOT_E2E_WEB_URL" \
+            --output-json preview-verification-report.json \
+            --output-md preview-verification-report.md \
+            --verbose
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            cat preview-verification-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload preview verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.browser }}-preview-verification-${{ github.run_id }}
+          path: |
+            preview-verification-report.json
+            preview-verification-report.md
+          retention-days: 5
+          if-no-files-found: ignore
       - name: Run P0 journeys and accessibility checks
         working-directory: web
         run: npm run e2e
@@ -104,6 +157,8 @@ jobs:
           path: |
             web/playwright-report/
             web/test-results/
+            /tmp/portpilot-api.log
+            /tmp/portpilot-web.log
           retention-days: 5
           if-no-files-found: ignore
 

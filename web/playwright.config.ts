@@ -45,7 +45,7 @@ export default defineConfig({
       command: `${pythonCmd} -m uvicorn app.main:app --host 127.0.0.1 --port ${apiPort}`,
       cwd: "../api",
       url: `${apiUrl}/ready`,
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       timeout: 60_000,
       env: {
         ...process.env,
@@ -55,7 +55,7 @@ export default defineConfig({
     {
       command: "node node_modules/next/dist/bin/next start",
       url: webUrl,
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       timeout: 60_000,
       env: {
         ...process.env,

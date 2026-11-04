@@ -10,6 +10,7 @@
     "start": "next start",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium",
+    "verify:preview": "python ../api/scripts/verify_preview_deployment.py --api-url http://127.0.0.1:18000 --web-url http://127.0.0.1:13000 --verbose",
     "lint": "eslint src e2e playwright.config.ts \"scripts/*.mjs\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" playwright.config.ts \"scripts/*.mjs\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" playwright.config.ts \"scripts/*.mjs\""

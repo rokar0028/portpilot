@@ -139,6 +139,10 @@ python api/scripts/verify_preview_deployment.py \
 
 The script exits with code `0` on a complete pass or code `1` if any critical gate fails.
 
+> [!NOTE]
+> **Automated CI Enforcement:**
+> In addition to manual execution against cloud previews, `verify_preview_deployment.py` is integrated directly into `.github/workflows/ci.yml` and `.github/workflows/release-confidence.yml` during containerized E2E jobs. Every pull request and release confidence run automatically executes all 11 technical gate probes, writes structured JSON/Markdown reports to `$GITHUB_STEP_SUMMARY`, and uploads report artifacts before browser journeys run.
+
 ---
 
 ## 4. Go / No-Go Decision Framework
