@@ -18,10 +18,7 @@ services:
           name: portpilot-db
           property: connectionString
       - key: FRONTEND_ORIGIN
-        fromService:
-          type: web
-          name: portpilot-web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://portpilot-web.onrender.com
       - key: ADMIN_API_TOKEN
         generateValue: true
 

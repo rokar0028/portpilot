@@ -872,6 +872,10 @@ footer {
   background: #e4eadf;
   color: var(--green);
 }
+.verdict-icon.compatible_with_limits {
+  background: #eef2dc;
+  color: #5c7428;
+}
 .verdict-icon.insufficient_data {
   background: #f4ead8;
   color: var(--amber);

@@ -6,6 +6,29 @@ from .schemas import CheckRequest
 RULE_ENGINE_VERSION = "0.3.0"
 
 
+def _normalize_resolution(value: str) -> str:
+    normalized = value.strip().lower()
+    aliases = {
+        "4k": "3840x2160",
+        "uhd": "3840x2160",
+        "4k uhd": "3840x2160",
+        "4k-uhd": "3840x2160",
+        "1080p": "1920x1080",
+        "fhd": "1920x1080",
+        "1440p": "2560x1440",
+        "qhd": "2560x1440",
+        "2k": "2560x1440",
+        "5k": "5120x2880",
+        "6k": "6016x3384",
+        "8k": "7680x4320",
+    }
+    aliased = aliases.get(normalized, normalized)
+    match = re.fullmatch(r"(\d{3,5})\s*x\s*(\d{3,5})", aliased)
+    if match:
+        return f"{match.group(1)}x{match.group(2)}"
+    return aliased
+
+
 def _mode_at_least(
     maximum_resolution: str | None,
     maximum_refresh: int | None,
@@ -22,16 +45,8 @@ def _mode_at_least(
         return None
 
     def dimensions(value: str) -> tuple[int, int] | None:
-        normalized = value.strip().lower()
-        aliases = {
-            "4k": "3840x2160",
-            "uhd": "3840x2160",
-            "1080p": "1920x1080",
-            "1440p": "2560x1440",
-            "5k": "5120x2880",
-            "6k": "6016x3384",
-        }
-        match = re.fullmatch(r"(\d{3,5})x(\d{3,5})", aliases.get(normalized, normalized))
+        normalized = _normalize_resolution(value)
+        match = re.fullmatch(r"(\d{3,5})x(\d{3,5})", normalized)
         return (int(match.group(1)), int(match.group(2))) if match else None
 
     requested = dimensions(requested_resolution)
@@ -45,41 +60,53 @@ def _configuration_match(
     configurations: list[dict[str, Any]] | None, requested: list[Any], topology: str | None
 ) -> bool | None:
     """Match only a manufacturer-documented simultaneous display configuration."""
-    if not configurations:
+    if not configurations or not requested:
         return None
 
-    def key(mode: Any) -> tuple[str, int, str | None]:
+    def mode_tuple(mode: Any) -> tuple[str, int, str | None]:
         if isinstance(mode, dict):
             resolution, refresh = mode.get("resolution"), mode.get("refresh_rate_hz")
             connection = mode.get("connection")
         else:
             resolution, refresh = mode.resolution, mode.refresh_rate_hz
             connection = mode.connection
-        normalized = str(resolution).strip().lower()
-        aliases = {
-            "4k": "3840x2160",
-            "uhd": "3840x2160",
-            "1080p": "1920x1080",
-            "1440p": "2560x1440",
-            "5k": "5120x2880",
-            "6k": "6016x3384",
-        }
         return (
-            aliases.get(normalized, normalized),
+            _normalize_resolution(str(resolution)),
             int(refresh),
-            connection.casefold() if connection else None,
+            connection.strip().casefold() if connection else None,
         )
 
-    requested_modes = sorted(key(mode) for mode in requested)
+    req_tuples = [mode_tuple(m) for m in requested]
+
     for configuration in configurations:
-        if sorted(key(mode) for mode in configuration.get("displays", [])) != requested_modes:
+        doc_displays = configuration.get("displays", [])
+        if len(doc_displays) != len(req_tuples):
             continue
         documented_topology = configuration.get("topology")
         if topology is not None and documented_topology is None:
             continue
         if topology is not None and documented_topology.strip().casefold() != topology.strip().casefold():
             continue
-        return True
+
+        doc_tuples = [mode_tuple(m) for m in doc_displays]
+
+        unmatched_doc = list(doc_tuples)
+        matched_all = True
+        for req_res, req_hz, req_conn in req_tuples:
+            found_idx = None
+            for idx, (doc_res, doc_hz, doc_conn) in enumerate(unmatched_doc):
+                if req_res == doc_res and req_hz == doc_hz:
+                    if req_conn is None or (doc_conn is not None and req_conn == doc_conn):
+                        found_idx = idx
+                        break
+            if found_idx is not None:
+                unmatched_doc.pop(found_idx)
+            else:
+                matched_all = False
+                break
+
+        if matched_all:
+            return True
     return None
 
 
@@ -137,8 +164,15 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
     if requested_count is None:
         add("Display count", "unknown", "The requested external display count is not established.")
     elif requested_count:
+        is_charger = accessory.get("category") == "usb_c_charger"
         dp_required = requirements.get("host_usb_c_video")
-        if dp_required is True:
+        if is_charger:
+            add(
+                "USB-C video",
+                "failed",
+                "The accessory is a charger and does not support video output.",
+            )
+        elif dp_required is True:
             video_supported = ports.get("usb_c_video_supported")
             if video_supported is True:
                 add(
@@ -183,7 +217,7 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 f"Requested display count is within the laptop limit of {laptop_display_limit}.",
             )
 
-        accessory_display_limit = outputs.get("display_count")
+        accessory_display_limit = 0 if is_charger else outputs.get("display_count")
         if accessory_display_limit is None:
             add(
                 "Accessory display outputs",
@@ -191,11 +225,18 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "The accessory source does not establish its usable display output count.",
             )
         elif requested_count > accessory_display_limit:
-            add(
-                "Accessory display outputs",
-                "failed",
-                f"Requested {requested_count} displays; the accessory provides {accessory_display_limit}.",
-            )
+            if is_charger:
+                add(
+                    "Accessory display outputs",
+                    "failed",
+                    f"The accessory is a charger and provides 0 display outputs; requested {requested_count} displays.",
+                )
+            else:
+                add(
+                    "Accessory display outputs",
+                    "failed",
+                    f"Requested {requested_count} displays; the accessory provides {accessory_display_limit}.",
+                )
         else:
             add(
                 "Accessory display outputs",
@@ -247,41 +288,55 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "from the laptop is not modeled."
             )
 
-        accessory_mode_ok = (
-            None
-            if combined_modes_requested
-            else _mode_at_least(
-                outputs.get("hdmi_max_resolution"),
-                outputs.get("hdmi_max_refresh_hz"),
-                requested_resolution,
-                requested_refresh,
-            )
-        )
-        if accessory_mode_ok is None and not combined_modes_requested:
-            add(
-                "Accessory display mode",
-                "unknown",
-                "The accessory source does not establish a maximum mode for its display output.",
-            )
-        elif accessory_mode_ok and not combined_modes_requested:
-            add(
-                "Accessory display mode",
-                "passed",
-                f"The accessory supports at least {requested_resolution} at {requested_refresh} Hz.",
-            )
-        elif not combined_modes_requested:
+        if is_charger and not combined_modes_requested:
             add(
                 "Accessory display mode",
                 "failed",
-                f"The requested {requested_resolution} at {requested_refresh} Hz "
-                "exceeds the accessory's documented maximum.",
+                "The accessory is a charger and does not provide display outputs.",
             )
+        else:
+            accessory_mode_ok = (
+                None
+                if combined_modes_requested
+                else _mode_at_least(
+                    outputs.get("hdmi_max_resolution"),
+                    outputs.get("hdmi_max_refresh_hz"),
+                    requested_resolution,
+                    requested_refresh,
+                )
+            )
+            if accessory_mode_ok is None and not combined_modes_requested:
+                add(
+                    "Accessory display mode",
+                    "unknown",
+                    "The accessory source does not establish a maximum mode for its display output.",
+                )
+            elif accessory_mode_ok and not combined_modes_requested:
+                add(
+                    "Accessory display mode",
+                    "passed",
+                    f"The accessory supports at least {requested_resolution} at {requested_refresh} Hz.",
+                )
+            elif not combined_modes_requested:
+                add(
+                    "Accessory display mode",
+                    "failed",
+                    f"The requested {requested_resolution} at {requested_refresh} Hz "
+                    "exceeds the accessory's documented maximum.",
+                )
 
         if combined_modes_requested:
             for label, configurations in (
                 ("Laptop", ports.get("display_configurations")),
                 ("Accessory", outputs.get("display_configurations")),
             ):
+                if label == "Accessory" and is_charger:
+                    add(
+                        "Accessory combined display mode",
+                        "failed",
+                        "The accessory is a charger and does not provide display outputs.",
+                    )
+                    continue
                 if label == "Laptop" and dp_required is False:
                     add(
                         "Laptop combined display mode",

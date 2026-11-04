@@ -111,7 +111,7 @@ def run_evaluation(cases: list[dict], mock: bool = False) -> dict:
             # Deterministic mock simulation
             time.sleep(0.001)
             raw_displays = expected.get("external_displays")
-            mock_displays = raw_displays if (raw_displays is None or 0 <= raw_displays <= 4) else None
+            mock_displays = raw_displays if (raw_displays is None or 0 <= raw_displays <= 8) else None
             result = SetupParseResponse(
                 setup=SetupRequest(
                     external_displays=mock_displays,

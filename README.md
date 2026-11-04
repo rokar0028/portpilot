@@ -8,7 +8,7 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 - Accessory: Anker Nano Hub (7-in-1, A83D2)
 - Setup: one 1080p external display plus laptop charging
 
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 15 laptops and 13 accessories; two accessories are held for model-identity review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
+The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 16 laptops and 13 accessories; three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
 
 The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check using the current catalogue and rules; the URL does not preserve the original result as a snapshot. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 

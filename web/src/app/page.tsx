@@ -115,6 +115,14 @@ export default function Home() {
     setAccessoryId(value);
     setResult(null);
     setError("");
+    const accessory = catalog?.accessories.find((item) => item.id === value);
+    if (accessory?.category === "usb_c_charger") {
+      if (setup.external_displays === 1) {
+        setSetup((prev) => ({ ...prev, external_displays: 0 }));
+      }
+    } else if (accessory && setup.external_displays === 0) {
+      setSetup((prev) => ({ ...prev, external_displays: 1 }));
+    }
   }
 
   function updateSetup(nextSetup: Setup) {
@@ -263,6 +271,11 @@ export default function Home() {
           )
             ? sharedAccessory!
             : "";
+          const hasDisplays = params.has("displays");
+          const hasRefresh = params.has("refresh");
+          const hasResolution = params.has("resolution");
+          const hasCharging = params.has("charging");
+
           const rawDisplays = params.get("displays");
           const rawRefresh = params.get("refresh");
           const rawResolution = params.get("resolution");
@@ -271,42 +284,59 @@ export default function Home() {
           const parsedDisplays =
             rawDisplays !== null &&
             rawDisplays !== "" &&
+            rawDisplays !== "null" &&
             !isNaN(Number(rawDisplays))
               ? Number(rawDisplays)
               : null;
           const parsedRefresh =
             rawRefresh !== null &&
             rawRefresh !== "" &&
+            rawRefresh !== "null" &&
             !isNaN(Number(rawRefresh))
               ? Number(rawRefresh)
               : null;
 
-          const nextSetup: Setup = {
-            external_displays:
-              parsedDisplays !== null &&
-              [0, 1, 2, 3, 4].includes(parsedDisplays)
+          const nextDisplays = hasDisplays
+            ? rawDisplays === "null" || rawDisplays === ""
+              ? null
+              : parsedDisplays !== null &&
+                  parsedDisplays >= 0 &&
+                  parsedDisplays <= 8
                 ? parsedDisplays
-                : 1,
-            resolution:
-              rawResolution &&
-              rawResolution !== "null" &&
-              rawResolution.length <= 30
+                : 1
+            : 1;
+
+          const nextResolution = hasResolution
+            ? rawResolution === "null" || rawResolution === ""
+              ? null
+              : rawResolution && rawResolution.length <= 30
                 ? rawResolution
-                : "1920x1080",
-            refresh_rate_hz:
-              parsedRefresh !== null &&
-              parsedRefresh >= 24 &&
-              parsedRefresh <= 240
+                : "1920x1080"
+            : "1920x1080";
+
+          const nextRefresh = hasRefresh
+            ? rawRefresh === "null" || rawRefresh === ""
+              ? null
+              : parsedRefresh !== null &&
+                  parsedRefresh >= 24 &&
+                  parsedRefresh <= 240
                 ? parsedRefresh
-                : 60,
-            laptop_charging:
-              rawCharging === "true"
-                ? true
-                : rawCharging === "false"
-                  ? false
-                  : rawCharging === "null" || rawCharging === ""
-                    ? null
-                    : true,
+                : 60
+            : 60;
+
+          const nextCharging = hasCharging
+            ? rawCharging === "true"
+              ? true
+              : rawCharging === "false"
+                ? false
+                : null
+            : true;
+
+          const nextSetup: Setup = {
+            external_displays: nextDisplays,
+            resolution: nextResolution,
+            refresh_rate_hz: nextRefresh,
+            laptop_charging: nextCharging,
           };
           setCatalog(data);
           setLaptopId(nextLaptop);
@@ -616,7 +646,11 @@ export default function Home() {
               <p>
                 {selectedAccessory.category === "usb_c_charger"
                   ? `USB-C charging output: ${selectedAccessory.usb_c_output_max_w ? `up to ${selectedAccessory.usb_c_output_max_w} W` : "not documented"}`
-                  : `Display outputs: ${selectedAccessory.hdmi_port_count ?? "not documented"} HDMI · up to ${selectedAccessory.hdmi_max_resolution ?? "not documented"}${selectedAccessory.hdmi_max_refresh_hz ? ` at ${selectedAccessory.hdmi_max_refresh_hz} Hz` : ""}`}
+                  : ["portable_monitor", "external_display"].includes(
+                        selectedAccessory.category,
+                      )
+                    ? `Display input: up to ${selectedAccessory.hdmi_max_resolution ?? "not documented"}${selectedAccessory.hdmi_max_refresh_hz ? ` at ${selectedAccessory.hdmi_max_refresh_hz} Hz` : ""}`
+                    : `Display outputs: ${selectedAccessory.hdmi_port_count ?? "not documented"} HDMI · up to ${selectedAccessory.hdmi_max_resolution ?? "not documented"}${selectedAccessory.hdmi_max_refresh_hz ? ` at ${selectedAccessory.hdmi_max_refresh_hz} Hz` : ""}`}
                 {selectedAccessory.category !== "usb_c_charger" && (
                   <>
                     <br />
@@ -741,9 +775,13 @@ export default function Home() {
                         })
                       }
                     >
-                      <option value="" disabled>
-                        Choose display count
-                      </option>
+                      <option value="">Unknown</option>
+                      {setup.external_displays !== null &&
+                        ![0, 1, 2, 3, 4].includes(setup.external_displays) && (
+                          <option value={setup.external_displays}>
+                            {setup.external_displays} displays
+                          </option>
+                        )}
                       {[0, 1, 2, 3, 4].map((count) => (
                         <option value={count} key={count}>
                           {count} display{count === 1 ? "" : "s"}
@@ -766,9 +804,7 @@ export default function Home() {
                         })
                       }
                     >
-                      <option value="" disabled>
-                        Choose resolution
-                      </option>
+                      <option value="">Unknown</option>
                       {setup.resolution &&
                         !["1920x1080", "2560x1440", "3840x2160"].includes(
                           setup.resolution,
@@ -824,9 +860,7 @@ export default function Home() {
                       })
                     }
                   >
-                    <option value="" disabled>
-                      Choose refresh
-                    </option>
+                    <option value="">Unknown</option>
                     {setup.refresh_rate_hz &&
                       ![30, 60].includes(setup.refresh_rate_hz) && (
                         <option value={setup.refresh_rate_hz}>
@@ -945,9 +979,11 @@ export default function Home() {
               >
                 {result.verdict === "compatible"
                   ? "✓"
-                  : result.verdict === "incompatible"
-                    ? "×"
-                    : "?"}
+                  : result.verdict === "compatible_with_limits"
+                    ? "!"
+                    : result.verdict === "incompatible"
+                      ? "×"
+                      : "?"}
               </div>
               <h2 className="verdict-title">{resultHeading}</h2>
               <p className="verdict-summary">{result.summary}</p>
@@ -1113,7 +1149,7 @@ export default function Home() {
           CONNECTIONS
         </span>
         <span>SPECIFICATIONS VERIFIED AGAINST MANUFACTURER SOURCES</span>
-        <a href="/coverage">Coverage &amp; limitations</a>
+        <Link href="/coverage">Coverage &amp; limitations</Link>
       </footer>
     </main>
   );

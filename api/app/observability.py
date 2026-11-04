@@ -8,6 +8,35 @@ from datetime import UTC, datetime
 from threading import Lock
 
 
+STANDARD_LOG_RECORD_ATTRS = {
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "module",
+    "msecs",
+    "message",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
+    "taskName",
+    "event_name",
+    "_portpilot_json",
+}
+
+
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
@@ -29,6 +58,11 @@ class JsonFormatter(logging.Formatter):
             value = getattr(record, key, None)
             if value is not None:
                 payload[key] = value
+
+        for key, value in record.__dict__.items():
+            if key not in STANDARD_LOG_RECORD_ATTRS and key not in payload and value is not None:
+                payload[key] = value
+
         return json.dumps(payload, separators=(",", ":"))
 
 

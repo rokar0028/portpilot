@@ -71,7 +71,10 @@ def parse_setup(description: str) -> SetupParseResponse:
         ) from error
 
     try:
-        content = body["choices"][0]["message"]["content"].strip()
+        raw_content = body["choices"][0]["message"]["content"]
+        if not isinstance(raw_content, str):
+            raise TypeError("Message content must be a string")
+        content = raw_content.strip()
         if content.startswith("```"):
             lines = content.splitlines()
             if lines[0].startswith("```"):
@@ -91,7 +94,7 @@ def parse_setup(description: str) -> SetupParseResponse:
         if not expected_setup_fields.issubset(parsed["setup"]):
             raise TypeError("Missing setup fields")
         return SetupParseResponse.model_validate(parsed)
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValidationError) as error:
+    except (KeyError, IndexError, TypeError, AttributeError, json.JSONDecodeError, ValidationError) as error:
         raise ParserInvalidResponse(
             "The setup parser returned invalid structured data. Use manual setup fields."
         ) from error

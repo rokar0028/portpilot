@@ -40,9 +40,9 @@ app = FastAPI(
     description="Evidence-backed laptop and accessory compatibility checks.",
 )
 frontend_origins = [
-    origin.strip()
+    origin.strip().rstrip("/")
     for origin in os.getenv("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
-    if origin.strip()
+    if origin.strip().rstrip("/")
 ]
 # Next.js uses the next available port when 3000 is occupied. Permit that
 # alternate local development port when the configured origin is localhost.
@@ -175,6 +175,7 @@ def accessory_rule_record(record: AccessoryModel) -> dict:
     for target, source in derived_rule_fields("accessory", "outputs", record.category).items():
         outputs[target] = getattr(record, source)
     return {
+        "category": record.category,
         "host_connection": record.host_connection,
         "requirements": requirements,
         "outputs": outputs,

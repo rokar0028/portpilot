@@ -188,3 +188,13 @@ def test_unknown_setup_requirements_produce_insufficient_data(client) -> None:
 
     assert result.verdict == "insufficient_data"
     assert any(item["status"] == "unknown" for item in result.requirements)
+
+
+def test_empty_or_whitespace_device_ids_rejected() -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        CheckRequest(laptop_id="", accessory_id="api-hub")
+
+    with pytest.raises(ValidationError):
+        CheckRequest(laptop_id="api-laptop", accessory_id="   ")

@@ -26,7 +26,7 @@ class SetupRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    external_displays: int | None = Field(default=1, ge=0, le=4)
+    external_displays: int | None = Field(default=1, ge=0, le=8)
     resolution: str | None = Field(default="1920x1080", max_length=30)
     refresh_rate_hz: int | None = Field(default=60, ge=24, le=240)
     laptop_charging: bool | None = True
@@ -50,8 +50,10 @@ def default_setup_request() -> SetupRequest:
 
 
 class CheckRequest(BaseModel):
-    laptop_id: str
-    accessory_id: str
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    laptop_id: str = Field(min_length=1, max_length=120)
+    accessory_id: str = Field(min_length=1, max_length=120)
     setup: SetupRequest = Field(default_factory=default_setup_request)
 
 

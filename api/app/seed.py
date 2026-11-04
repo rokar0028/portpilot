@@ -2,6 +2,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
+from .capabilities import publication_requirements
 from .database import SessionLocal
 from .models import AccessoryModel, LaptopModel, SourceEvidence
 
@@ -11,7 +12,6 @@ SEED_IDENTITY_FIELDS = {
     "id",
     "brand",
     "name",
-    "category",
     "region_variant",
     "hardware_revision",
     "review_status",
@@ -26,12 +26,18 @@ def validate_seed_record(record: dict) -> None:
     if any(not record.get(field) for field in required_metadata):
         raise ValueError(f"Seed record {record.get('id')} is missing source metadata.")
 
-    if record.get("review_status") == "verified" and (
-        not record.get("model_code") or "model_code" not in record.get("evidence", [])
-    ):
-        raise ValueError(
-            f"Verified seed record {record.get('id')} needs an evidenced manufacturer model code."
-        )
+    if record.get("review_status") == "verified":
+        if not record.get("model_code") or "model_code" not in record.get("evidence", []):
+            raise ValueError(
+                f"Verified seed record {record.get('id')} needs an evidenced manufacturer model code."
+            )
+        owner_kind = "accessory" if "category" in record else "laptop"
+        required_fields = publication_requirements(owner_kind, record.get("category"))
+        for req in required_fields:
+            if record.get(req) is None or req not in record.get("evidence", []):
+                raise ValueError(
+                    f"Verified seed record {record.get('id')} lacks required publication field or evidence for: {req}."
+                )
 
     evidence_keys = record.get("evidence", [])
     if len(evidence_keys) != len(set(evidence_keys)):
@@ -502,6 +508,7 @@ ACCESSORIES = [
         "source_url": "https://service.anker.com/product-description/a085g000004zuplAAA",
         "excerpt": "Anker lists the hub's HDMI, Power Delivery, USB-A, and Ethernet port specifications.",
         "evidence_excerpts": {
+            "category": "Anker describes the product as a USB-C hub.",
             "host_connection": "Anker 364 USB-C Hub product title.",
             "hdmi_port_count": "2 x HDMI outputs.",
             "hdmi_max_resolution": "HDMI outputs up to 4K (3840 x 2160).",
@@ -512,6 +519,7 @@ ACCESSORIES = [
             "ethernet_max_gbps": "1 x Ethernet port, 1Gbps.",
         },
         "evidence": [
+            "category",
             "host_connection",
             "hdmi_port_count",
             "hdmi_max_resolution",
@@ -544,6 +552,7 @@ ACCESSORIES = [
         "excerpt": "Anker product specifications for this hub.",
         "evidence_excerpts": {
             "model_code": "Anker 555 USB-C Hub user manual model A8383.",
+            "category": "Anker describes the product as an 8-in-1 USB-C hub.",
             "host_connection": "Compatible laptops need a USB-C host port.",
             "requires_usb_c_dp_alt_mode": "Host USB-C must support Power Delivery and DisplayPort Alt Mode.",
             "hdmi_port_count": "1 x HDMI port.",
@@ -555,6 +564,7 @@ ACCESSORIES = [
         },
         "evidence": [
             "model_code",
+            "category",
             "host_connection",
             "requires_usb_c_dp_alt_mode",
             "hdmi_port_count",
@@ -587,6 +597,7 @@ ACCESSORIES = [
         "excerpt": "Anker product specifications for this hub.",
         "evidence_excerpts": {
             "model_code": "Anker 543 USB-C Hub user guide model A8365.",
+            "category": "Anker describes the product as a 6-in-1 USB-C hub.",
             "host_connection": "Compatible laptops need a USB-C host port.",
             "requires_usb_c_dp_alt_mode": "Host USB-C must support Power Delivery and DisplayPort Alt Mode.",
             "hdmi_port_count": "1 x HDMI port.",
@@ -598,6 +609,7 @@ ACCESSORIES = [
         },
         "evidence": [
             "model_code",
+            "category",
             "host_connection",
             "requires_usb_c_dp_alt_mode",
             "hdmi_port_count",
@@ -630,6 +642,7 @@ ACCESSORIES = [
         "excerpt": "Anker product specifications for this hub.",
         "evidence_excerpts": {
             "model_code": "Anker 655 USB-C Hub user manual model A8382.",
+            "category": "Anker describes the product as an 8-in-1 USB-C hub.",
             "host_connection": "Compatible laptops need a USB-C host port.",
             "requires_usb_c_dp_alt_mode": "Host USB-C must support Power Delivery and DisplayPort Alt Mode.",
             "hdmi_port_count": "1 x HDMI port.",
@@ -641,6 +654,7 @@ ACCESSORIES = [
         },
         "evidence": [
             "model_code",
+            "category",
             "host_connection",
             "requires_usb_c_dp_alt_mode",
             "hdmi_port_count",
@@ -673,11 +687,12 @@ ACCESSORIES = [
         "excerpt": "Anker lists one USB-C output port with a maximum 65W output and no USB-A output port.",
         "evidence_excerpts": {
             "model_code": "Anker 715 Charger model number A2663.",
+            "category": "Anker describes the product as a 65W USB-C wall charger.",
             "host_connection": "The charger has one USB-C output port.",
             "usb_c_output_max_w": "USB-C output: 20V at 3.25A (65W max).",
             "usb_a_port_count": "Total USB-A ports: 0.",
         },
-        "evidence": ["model_code", "host_connection", "usb_c_output_max_w", "usb_a_port_count"],
+        "evidence": ["model_code", "category", "host_connection", "usb_c_output_max_w", "usb_a_port_count"],
     },
 ]
 
@@ -1028,6 +1043,8 @@ ACCESSORIES.extend(
 next(row for row in ACCESSORIES if row["id"] == "anker-nano-hub-6in1-a83c3")["review_status"] = "needs_review"
 # This listing does not establish a precise manufacturer model code; keep it out of published checks.
 next(row for row in ACCESSORIES if row["id"] == "anker-364-usb-c-hub")["review_status"] = "needs_review"
+# The manufacturer page conflicts between 65W total output and 100W per port; keep out of published checks until clarified.
+next(row for row in ACCESSORIES if row["id"] == "anker-prime-charger-100w-a2343")["review_status"] = "needs_review"
 
 
 def upsert_records(session: Session) -> None:
@@ -1053,7 +1070,7 @@ def upsert_records(session: Session) -> None:
                 source_url=source["source_url"],
                 excerpt=source.get("evidence_excerpts", {}).get(capability_key, source["excerpt"]),
                 checked_on=CHECKED_ON,
-                review_status="verified",
+                review_status=source.get("review_status", "verified"),
             )
             session.merge(evidence)
 
@@ -1079,7 +1096,7 @@ def upsert_records(session: Session) -> None:
                 source_url=source["source_url"],
                 excerpt=source.get("evidence_excerpts", {}).get(capability_key, source["excerpt"]),
                 checked_on=CHECKED_ON,
-                review_status="verified",
+                review_status=source.get("review_status", "verified"),
             )
             session.merge(evidence)
 

@@ -125,6 +125,20 @@ def test_malformed_or_out_of_range_provider_output_is_rejected(monkeypatch):
         setup_parser.parse_setup("One display")
 
 
+def test_null_or_non_string_message_content_is_safely_rejected(monkeypatch):
+    configure_provider(monkeypatch)
+    for invalid_content in (None, 123, False, []):
+        monkeypatch.setattr(
+            setup_parser,
+            "urlopen",
+            lambda *_args, **_kwargs: FakeResponse(
+                {"choices": [{"message": {"content": invalid_content}}]}
+            ),
+        )
+        with pytest.raises(ParserInvalidResponse):
+            setup_parser.parse_setup("One display")
+
+
 def test_unconfigured_provider_is_explicitly_unavailable(monkeypatch):
     monkeypatch.delenv("SETUP_PARSER_BASE_URL", raising=False)
     monkeypatch.delenv("SETUP_PARSER_MODEL", raising=False)

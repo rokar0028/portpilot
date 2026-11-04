@@ -571,3 +571,67 @@ def test_dell_wd19s_dock_requires_usb_c_dp_alt_mode() -> None:
     failed_req = next(item for item in result["requirements"] if item["name"] == "USB-C video")
     assert failed_req["status"] == "failed"
     assert "The accessory requires USB-C video" in failed_req["detail"]
+
+
+def test_resolution_normalization_handles_whitespace_and_aliases() -> None:
+    laptop, accessory = records()
+    for res in ("1920 x 1080", "1920x1080", " 1920 x 1080 ", "4k uhd", "4K UHD"):
+        result = check(laptop, accessory, resolution=res, refresh_rate_hz=60)
+        assert result["verdict"] == "compatible", f"Failed for resolution: {res}"
+
+
+def test_charger_with_display_request_is_incompatible() -> None:
+    laptop, _ = records()
+    charger = {
+        "category": "usb_c_charger",
+        "host_connection": "USB-C",
+        "requirements": {"host_usb_c_video": None},
+        "outputs": {
+            "display_count": None,
+            "hdmi_max_resolution": None,
+            "hdmi_max_refresh_hz": None,
+            "charging_output_watts": 65,
+        },
+        "evidence": [],
+    }
+    # Requesting 1 display with a charger should be clearly marked incompatible
+    result = check(laptop, charger, external_displays=1)
+    assert result["verdict"] == "incompatible"
+    failed_names = {item["name"] for item in result["requirements"] if item["status"] == "failed"}
+    assert "USB-C video" in failed_names
+    assert "Accessory display outputs" in failed_names
+
+    # Requesting 0 displays with a charger should succeed if charging is supported
+    result_zero = check(laptop, charger, external_displays=0, laptop_charging=True)
+    assert result_zero["verdict"] == "compatible"
+
+    # Requesting multiple displays with explicit modes with a charger should fail accessory combined display mode
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    result_multi = check(laptop, charger, displays=modes)
+    assert result_multi["verdict"] == "incompatible"
+    accessory_combined = next(
+        item for item in result_multi["requirements"] if item["name"] == "Accessory combined display mode"
+    )
+    assert accessory_combined["status"] == "failed"
+    assert "charger" in accessory_combined["detail"]
+
+
+def test_configuration_match_with_unspecified_connection() -> None:
+    laptop, accessory = records()
+    doc_modes = [
+        {"resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "HDMI"},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "DisplayPort"},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": doc_modes, "topology": "extended"}]
+    accessory["outputs"]["display_configurations"] = [{"displays": doc_modes, "topology": "extended"}]
+
+    # User requests modes without specifying connector tag
+    req_modes = [
+        {"resolution": "3840x2160", "refresh_rate_hz": 60, "connection": None},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": None},
+    ]
+    result = check(laptop, accessory, displays=req_modes, display_topology="extended")
+    assert result["verdict"] == "compatible"
