@@ -96,7 +96,7 @@ def _configuration_match(
             found_idx = None
             for idx, (doc_res, doc_hz, doc_conn) in enumerate(unmatched_doc):
                 if req_res == doc_res and req_hz == doc_hz:
-                    if req_conn is None or (doc_conn is not None and req_conn == doc_conn):
+                    if req_conn is None or doc_conn is None or req_conn == doc_conn:
                         found_idx = idx
                         break
             if found_idx is not None:
@@ -217,7 +217,21 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 f"Requested display count is within the laptop limit of {laptop_display_limit}.",
             )
 
-        accessory_display_limit = 0 if is_charger else outputs.get("display_count")
+        is_display = accessory.get("category") in {"portable_monitor", "external_display"}
+        config_display_max = (
+            max((len(cfg.get("displays", [])) for cfg in outputs.get("display_configurations") or []), default=0)
+            if outputs.get("display_configurations")
+            else 0
+        )
+        accessory_display_limit = (
+            0
+            if is_charger
+            else 1
+            if is_display
+            else max(outputs.get("display_count") or 0, config_display_max)
+            if (outputs.get("display_count") is not None or config_display_max > 0)
+            else None
+        )
         if accessory_display_limit is None:
             add(
                 "Accessory display outputs",
@@ -231,6 +245,12 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                     "failed",
                     f"The accessory is a charger and provides 0 display outputs; requested {requested_count} displays.",
                 )
+            elif is_display:
+                add(
+                    "Accessory display outputs",
+                    "failed",
+                    f"The accessory is a single display and provides 1 screen; requested {requested_count} displays.",
+                )
             else:
                 add(
                     "Accessory display outputs",
@@ -238,11 +258,18 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                     f"Requested {requested_count} displays; the accessory provides {accessory_display_limit}.",
                 )
         else:
-            add(
-                "Accessory display outputs",
-                "passed",
-                f"The accessory has enough documented outputs ({accessory_display_limit}).",
-            )
+            if is_display:
+                add(
+                    "Accessory display outputs",
+                    "passed",
+                    "The accessory provides 1 display screen.",
+                )
+            else:
+                add(
+                    "Accessory display outputs",
+                    "passed",
+                    f"The accessory has enough documented outputs ({accessory_display_limit}).",
+                )
 
         if dp_required is True:
             laptop_resolution = ports.get("usb_c_max_resolution")
@@ -335,6 +362,13 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                         "Accessory combined display mode",
                         "failed",
                         "The accessory is a charger and does not provide display outputs.",
+                    )
+                    continue
+                if label == "Accessory" and is_display:
+                    add(
+                        "Accessory combined display mode",
+                        "failed",
+                        "The accessory is a single display and cannot support multiple simultaneous displays.",
                     )
                     continue
                 if label == "Laptop" and dp_required is False:

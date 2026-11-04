@@ -635,3 +635,54 @@ def test_configuration_match_with_unspecified_connection() -> None:
     ]
     result = check(laptop, accessory, displays=req_modes, display_topology="extended")
     assert result["verdict"] == "compatible"
+
+    # Documented configuration has no connection tag, matching specific requested connectors
+    doc_general = [
+        {"resolution": "3840x2160", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": doc_general, "topology": "extended"}]
+    result_specific = check(laptop, accessory, displays=doc_modes, display_topology="extended")
+    assert result_specific["verdict"] == "compatible"
+
+
+def test_portable_monitor_evaluation_provides_one_display() -> None:
+    laptop, _ = records()
+    monitor = {
+        "category": "portable_monitor",
+        "host_connection": "USB-C",
+        "requirements": {"host_usb_c_video": True},
+        "outputs": {
+            "display_count": 0,
+            "hdmi_max_resolution": "1920x1080",
+            "hdmi_max_refresh_hz": 60,
+            "display_configurations": None,
+            "charging_output_watts": None,
+        },
+        "evidence": [],
+    }
+
+    # 1 display at 1080p 60Hz should be compatible
+    res_one = check(
+        laptop,
+        monitor,
+        external_displays=1,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        laptop_charging=False,
+    )
+    assert res_one["verdict"] == "compatible"
+    disp_output_check = next(
+        item for item in res_one["requirements"] if item["name"] == "Accessory display outputs"
+    )
+    assert disp_output_check["status"] == "passed"
+    assert "1 display screen" in disp_output_check["detail"]
+
+    # 2 displays should be incompatible
+    res_two = check(laptop, monitor, external_displays=2, laptop_charging=False)
+    assert res_two["verdict"] == "incompatible"
+    disp_two_check = next(
+        item for item in res_two["requirements"] if item["name"] == "Accessory display outputs"
+    )
+    assert disp_two_check["status"] == "failed"
+    assert "single display" in disp_two_check["detail"]
