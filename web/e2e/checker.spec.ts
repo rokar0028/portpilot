@@ -299,7 +299,7 @@ test("submits a low-data report with deterministic result context", async ({
     laptop_id: "e2e-good-laptop",
     accessory_id: "e2e-good-hub",
     verdict: "compatible",
-    rule_engine_version: "0.3.0",
+    rule_engine_version: "0.4.0",
     note: "The display result seems incorrect.",
   });
   expect(submitted).not.toHaveProperty("user_agent");
