@@ -927,12 +927,64 @@ footer {
   color: #62735d;
   font-size: 11px;
 }
+.limit-callout {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: #fdf8ef;
+  border: 1px solid #ebd8b3;
+  border-radius: 6px;
+}
+.limit-callout-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8c5b16;
+}
+.limit-callout-header span {
+  font-size: 14px;
+}
 .limit-list {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   padding-left: 18px;
   color: #765d37;
   font-size: 12px;
   line-height: 1.5;
+}
+.insufficient-data-box {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: #fcf9f2;
+  border: 1px solid #e7ded0;
+  border-left: 4px solid #b8924b;
+  border-radius: 4px;
+}
+.insufficient-data-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #765d37;
+}
+.insufficient-icon {
+  font-size: 14px;
+  font-weight: 700;
+  color: #b8924b;
+}
+.missing-specs-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #6e5522;
+  line-height: 1.5;
+}
+.missing-specs-list li {
+  margin-bottom: 5px;
+}
+.missing-specs-list strong {
+  color: #554016;
 }
 .requirements {
   margin: 19px 0 19px;

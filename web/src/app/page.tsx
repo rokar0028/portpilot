@@ -994,10 +994,36 @@ export default function Home() {
               <h2 className="verdict-title">{resultHeading}</h2>
               <p className="verdict-summary">{result.summary}</p>
               {result.verdict === "insufficient_data" && (
-                <p className="result-caveat">
-                  Not verified means we don’t have enough published information;
-                  it doesn’t prove the setup won’t work.
-                </p>
+                <div
+                  className="insufficient-data-box"
+                  role="region"
+                  aria-label="Missing specifications breakdown"
+                >
+                  <div className="insufficient-data-header">
+                    <span className="insufficient-icon" aria-hidden="true">
+                      ℹ
+                    </span>
+                    <strong>What manufacturer data is missing?</strong>
+                  </div>
+                  <p className="result-caveat">
+                    Not verified means the manufacturer documentation is
+                    incomplete or unavailable; it doesn’t prove the setup won’t
+                    work. PortPilot refuses to guess undocumented
+                    specifications.
+                  </p>
+                  <ul
+                    className="missing-specs-list"
+                    aria-label="Unverified requirements"
+                  >
+                    {result.requirements
+                      .filter((req) => req.status === "unknown")
+                      .map((req) => (
+                        <li key={req.name}>
+                          <strong>{req.name}:</strong> {req.detail}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
               )}
               <button
                 className="share-button"
@@ -1017,11 +1043,21 @@ export default function Home() {
                 a snapshot.
               </p>
               {result.limits.length > 0 && (
-                <ul className="limit-list" aria-label="Known limitations">
-                  {result.limits.map((limit) => (
-                    <li key={limit}>{limit}</li>
-                  ))}
-                </ul>
+                <div
+                  className="limit-callout"
+                  role="region"
+                  aria-label="Hardware limitations and constraints"
+                >
+                  <div className="limit-callout-header">
+                    <span aria-hidden="true">⚠</span>
+                    <strong>Hardware constraints &amp; limitations</strong>
+                  </div>
+                  <ul className="limit-list" aria-label="Known limitations">
+                    {result.limits.map((limit) => (
+                      <li key={limit}>{limit}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
               <div className="requirements">
                 {result.requirements.map((item) => (
