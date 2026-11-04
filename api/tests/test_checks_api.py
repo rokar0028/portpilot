@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base
 from app.main import accessory_rule_record, check_compatibility, create_result_report, laptop_rule_record
 from app.models import AccessoryModel, LaptopModel, ResultReport, SourceEvidence
+from app.rules import RULE_ENGINE_VERSION
 from app.schemas import CheckRequest, ResultReportWrite
 
 
@@ -96,7 +97,7 @@ def test_check_endpoint_handler_returns_verdict_and_device_evidence(client) -> N
     )
 
     assert response.verdict == "compatible_with_limits"
-    assert response.rule_engine_version == "0.3.0"
+    assert response.rule_engine_version == RULE_ENGINE_VERSION
     assert {item["status"] for item in response.requirements} == {"passed"}
     assert len(response.evidence) == 2
     assert response.limits
@@ -119,7 +120,7 @@ def test_result_report_persists_only_bounded_context(client) -> None:
             accessory_id="api-hub",
             setup={"external_displays": 1, "resolution": "1920x1080", "refresh_rate_hz": 60},
             verdict="compatible_with_limits",
-            rule_engine_version="0.3.0",
+            rule_engine_version=RULE_ENGINE_VERSION,
             note="The display mode seems incorrect.",
         ),
         client,

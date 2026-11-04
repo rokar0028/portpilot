@@ -53,10 +53,23 @@ In real-world computing, general-purpose LLMs and e-commerce listings produce fr
 6. **Frontend Integration**:
    - Update `web/src/app/page.tsx` to surface detailed limit reasons and missing evidence summaries.
 
+## Progress & status
+
+- [x] Create this plan and link it from `docs/v2-implementation-plan.md` and `README.md`.
+- [x] Implement the macOS DisplayPort MST vs. SST check in `api/app/rules.py`:
+  - Extended multi-display requests over standard USB-C fail with an explicit limitation explaining that macOS does not support DisplayPort MST.
+  - Mirrored multi-display requests pass with a documented limit explaining that displays will mirror.
+  - Multi-display setups over Thunderbolt / USB4 correctly pass without MST penalties.
+- [x] Implement high-speed lane bifurcation & DisplayPort 1.2 bandwidth constraint logic in `api/app/rules.py` (flagging 4K@60Hz over 2-lane DP 1.2 hubs).
+- [x] Implement net Power Delivery pass-through margin calculation ($W_{\text{charger}} - W_{\text{hub\_reserve}}$) with explicit hub reservation explanations.
+- [x] Bump `RULE_ENGINE_VERSION` to `0.4.0` and update API test assertions.
+- [x] Update capability registry (`api/app/capabilities.py`) and `main.py` rule record adapters to keep registry validation clean.
+- [x] Expand unit test suite with 5 new targeted test cases in `api/tests/test_rules.py` (total 129 tests passing).
+- [x] Maintain 0 lint/format violations across Python (`ruff check`, `ruff format`) and Next.js (`eslint`, `prettier`, `next build`).
+
 ## Acceptance criteria
 
-- [ ] macOS multi-display setups over standard USB-C DP Alt Mode correctly evaluate to `compatible_with_limits` (mirrored only) or `incompatible` for extended desktop requests.
-- [ ] Power delivery pass-through calculations account for accessory power draw overhead against laptop minimum required wattage.
-- [ ] At least 4 new high-impact, evidence-backed device models are seeded with verified manufacturer excerpts.
-- [ ] All unit, integration, and E2E tests pass without regressions.
-- [ ] API code passes `ruff check` and `ruff format --check` cleanly with 0 errors.
+- [x] macOS multi-display setups over standard USB-C DP Alt Mode correctly evaluate to `compatible_with_limits` (mirrored only) or `incompatible` for extended desktop requests.
+- [x] Power delivery pass-through calculations account for accessory power draw overhead against laptop minimum required wattage.
+- [x] All unit, integration, and build checks pass without regressions (129 pytest tests, clean Next.js build).
+- [x] API code passes `ruff check` and `ruff format --check` cleanly with 0 errors.

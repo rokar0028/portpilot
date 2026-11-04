@@ -3,7 +3,7 @@ from typing import Any
 
 from .schemas import CheckRequest
 
-RULE_ENGINE_VERSION = "0.3.0"
+RULE_ENGINE_VERSION = "0.4.0"
 
 
 def _normalize_resolution(value: str) -> str:
@@ -140,7 +140,7 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
 
     # A connection is required for every setup. The initial catalogue models USB-C hosts.
     host = (accessory.get("host_connection") or "").lower()
-    if "usb-c" in host or "usb c" in host:
+    if any(token in host for token in ("usb-c", "usb c", "thunderbolt", "usb4")):
         port_count = ports.get("usb_c_port_count")
         if port_count is None:
             add(
@@ -281,6 +281,52 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                     "Accessory display outputs",
                     "passed",
                     f"The accessory has enough documented outputs ({accessory_display_limit}).",
+                )
+
+        os_name = (laptop.get("operating_system") or "").strip().lower()
+        is_macos = "macos" in os_name or "os x" in os_name or os_name.startswith("mac")
+        host_conn = (accessory.get("host_connection") or "").strip().lower()
+        is_thunderbolt = "thunderbolt" in host_conn or "usb4" in host_conn
+
+        if requested_count > 1 and is_macos and not is_charger and not is_display:
+            if is_thunderbolt:
+                add(
+                    "Display topology (MST)",
+                    "passed",
+                    "macOS supports multiple independent external displays over Thunderbolt / USB4.",
+                )
+            else:
+                topology = setup.display_topology.strip().lower() if setup.display_topology else None
+                if topology == "extended":
+                    add(
+                        "Display topology (MST)",
+                        "failed",
+                        "macOS does not support DisplayPort Multi-Stream Transport (MST) over "
+                        "standard USB-C; multiple external displays cannot be extended independently.",
+                    )
+                else:
+                    add(
+                        "Display topology (MST)",
+                        "passed",
+                        "Multiple external displays over standard USB-C will mirror each other on macOS.",
+                    )
+                    limits.append(
+                        "On macOS, multiple external displays over standard USB-C DisplayPort Alt Mode "
+                        "mirror each other (macOS does not support DisplayPort MST)."
+                    )
+
+        dp_version = ports.get("usb_c_dp_version")
+        if (
+            dp_version == "1.2"
+            and not is_thunderbolt
+            and accessory.get("category") in {"usb_c_hub", "usb_c_dock"}
+        ):
+            norm_res = _normalize_resolution(requested_resolution) if requested_resolution else ""
+            if norm_res == "3840x2160" and requested_refresh and requested_refresh >= 60:
+                limits.append(
+                    "DisplayPort 1.2 hosts require 4 full video lanes for 4K at 60 Hz; "
+                    "hubs providing USB 3.0 data speeds reduce video to 2 lanes, "
+                    "limiting output to 4K at 30 Hz."
                 )
 
         if dp_required is True:
@@ -435,6 +481,13 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         laptop_min = ports.get("usb_c_pd_input_min_w")
         laptop_max = ports.get("usb_c_pd_input_max_w")
         accessory_watts = outputs.get("charging_output_watts")
+        hub_input_watts = accessory.get("pd_input_max_w")
+
+        overhead_note = ""
+        if hub_input_watts is not None and accessory_watts is not None and hub_input_watts > accessory_watts:
+            overhead = hub_input_watts - accessory_watts
+            overhead_note = f" (after {overhead} W hub reservation from {hub_input_watts} W input)"
+
         if laptop_min is None or accessory_watts is None:
             add(
                 "Charging",
@@ -446,17 +499,18 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             add(
                 "Charging",
                 "failed",
-                f"The accessory provides up to {accessory_watts} W, below the "
+                f"The accessory provides up to {accessory_watts} W{overhead_note}, below the "
                 f"laptop's documented minimum input of {laptop_min} W.",
             )
         elif laptop_max is not None and accessory_watts < laptop_max:
             add(
                 "Charging",
                 "passed",
-                f"The accessory's {accessory_watts} W meets the documented minimum input of {laptop_min} W.",
+                f"The accessory's {accessory_watts} W{overhead_note} meets the documented "
+                f"minimum input of {laptop_min} W.",
             )
             limitation = (
-                f"Charging is limited to up to {accessory_watts} W; "
+                f"Charging is limited to up to {accessory_watts} W{overhead_note}; "
                 f"the laptop lists support up to {laptop_max} W."
             )
             limits.append(limitation)
@@ -464,7 +518,8 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             add(
                 "Charging",
                 "passed",
-                f"The accessory's {accessory_watts} W meets the laptop's documented charging input range.",
+                f"The accessory's {accessory_watts} W{overhead_note} meets the laptop's "
+                "documented charging input range.",
             )
 
     if failed:

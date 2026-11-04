@@ -160,6 +160,7 @@ def laptop_rule_record(record: LaptopModel) -> dict:
     ports = {target: getattr(record, source) for target, source in rule_fields("laptop", "ports").items()}
     ports["usb_c_video"] = f"DisplayPort {record.usb_c_dp_version}" if record.usb_c_dp_version else None
     return {
+        "operating_system": record.operating_system,
         "ports": ports,
         "evidence": [],
     }
@@ -177,6 +178,7 @@ def accessory_rule_record(record: AccessoryModel) -> dict:
     return {
         "category": record.category,
         "host_connection": record.host_connection,
+        "pd_input_max_w": record.pd_input_max_w,
         "requirements": requirements,
         "outputs": outputs,
         "evidence": [],

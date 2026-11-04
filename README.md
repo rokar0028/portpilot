@@ -18,12 +18,17 @@ The [coverage and limitations page](/coverage) reports live verified catalogue c
 
 - [PortPilot implementation plan](docs/portpilot-implementation-plan.md) — product scope and original implementation direction.
 - [V2 implementation plan](docs/v2-implementation-plan.md) — follow-on workstreams and V2 release acceptance criteria.
+- [Workstream 0 implementation plan](docs/v2-workstream-0-implementation-plan.md) — V2 baseline inventory, capability registry, and implementation control.
 - [Workstream 1 implementation plan](docs/v2-workstream-1-implementation-plan.md) — device identity, duplicate review, and evidence threshold.
 - [Workstream 2 implementation plan](docs/v2-workstream-2-implementation-plan.md) — evidence conflicts, rechecks, and correction history.
 - [Workstream 3 implementation plan](docs/v2-workstream-3-implementation-plan.md) — capability registry integration and consistency checks.
+- [Workstream 4 implementation plan](docs/v2-workstream-4-implementation-plan.md) — simultaneous display configurations, modes, and topology.
 - [Workstream 5 implementation plan](docs/v2-workstream-5-implementation-plan.md) — model-finding help, mobile readability, low-data reporting, and sharing behavior.
+- [Workstream 6 implementation plan](docs/v2-workstream-6-implementation-plan.md) — screen-reader manual audit plan and accessibility checks.
 - [Workstream 7 implementation plan](docs/v2-workstream-7-implementation-plan.md) — latency target, duration distributions, and migration recovery.
 - [Workstream 8 implementation plan](docs/v2-workstream-8-implementation-plan.md) — live-provider parser evaluation, versioned benchmarks, and accuracy reporting.
+- [Workstream 9 implementation plan](docs/v2-workstream-9-implementation-plan.md) — preview deployment verification and release checklist.
+- [Workstream 10 implementation plan](docs/v2-workstream-10-implementation-plan.md) — contributor guide, playbooks, and hand-off.
 - [Workstream 11 implementation plan](docs/v2-workstream-11-implementation-plan.md) — hardware protocol fidelity, physical bus constraints, and catalogue depth.
 - [Capability registry contributor guide](docs/capability-registry.md) — how to add a capability across catalogue, evidence, publication, and rules.
 - [V2 migration and rollout notes](docs/v2-migration-rollout.md) — revision history, data impact, rollout, and rollback guidance.
@@ -174,9 +179,9 @@ flowchart LR
 - Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow and protected admin API require evidence for populated published fields.
 - PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
 - The verified catalogue currently contains 18 laptops and 15 accessories: USB-C hubs, USB-C docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
-- The evaluator test file defines 52 distinct scenarios when parameterized inputs are counted. The API suite passes 75 tests; API lint/format, frontend lint/format, and the production build also pass.
+- The evaluator test suite in `tests/test_rules.py` covers 72 distinct compatibility scenarios. The complete API test suite passes 129 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the production build also pass.
 
-The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Phase 6 evidence review, desktop/mobile browser checks, and quality checks are complete.
+The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, and protocol fidelity rules are complete.
 
 ## Operations and monitoring
 

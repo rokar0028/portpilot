@@ -687,3 +687,78 @@ def test_portable_monitor_evaluation_provides_one_display() -> None:
     )
     assert disp_two_check["status"] == "failed"
     assert "single display" in disp_two_check["detail"]
+
+
+def test_macos_mst_multiple_displays_over_usbc_mirrors_by_default() -> None:
+    laptop, accessory = records()
+    laptop["operating_system"] = "macOS"
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": modes}]
+    accessory["outputs"]["display_configurations"] = [{"displays": modes}]
+    res = check(laptop, accessory, displays=modes, laptop_charging=False)
+    assert res["verdict"] == "compatible_with_limits"
+    mst_check = next(item for item in res["requirements"] if item["name"] == "Display topology (MST)")
+    assert mst_check["status"] == "passed"
+    assert "mirror" in mst_check["detail"]
+    assert any("mirror" in limit for limit in res["limits"])
+
+
+def test_macos_mst_multiple_displays_over_usbc_extended_fails() -> None:
+    laptop, accessory = records()
+    laptop["operating_system"] = "macOS"
+    accessory["outputs"]["display_count"] = 2
+    res = check(laptop, accessory, external_displays=2, display_topology="extended", laptop_charging=False)
+    assert res["verdict"] == "incompatible"
+    mst_check = next(item for item in res["requirements"] if item["name"] == "Display topology (MST)")
+    assert mst_check["status"] == "failed"
+    assert "Multi-Stream Transport" in mst_check["detail"]
+
+
+def test_macos_multiple_displays_over_thunderbolt_passes() -> None:
+    laptop, accessory = records()
+    laptop["operating_system"] = "macOS"
+    accessory["host_connection"] = "Thunderbolt 4"
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60},
+    ]
+    laptop["ports"]["display_configurations"] = [{"displays": modes, "topology": "extended"}]
+    accessory["outputs"]["display_configurations"] = [{"displays": modes, "topology": "extended"}]
+    res = check(laptop, accessory, displays=modes, display_topology="extended", laptop_charging=False)
+    assert res["verdict"] == "compatible"
+    mst_check = next(item for item in res["requirements"] if item["name"] == "Display topology (MST)")
+    assert mst_check["status"] == "passed"
+    assert "Thunderbolt" in mst_check["detail"]
+
+
+def test_dp_1_2_4k60_lane_bifurcation_reports_limit() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["usb_c_dp_version"] = "1.2"
+    accessory["category"] = "usb_c_hub"
+    accessory["host_connection"] = "USB-C"
+    res = check(
+        laptop,
+        accessory,
+        external_displays=1,
+        resolution="3840x2160",
+        refresh_rate_hz=60,
+        laptop_charging=False,
+    )
+    assert res["verdict"] == "compatible_with_limits"
+    assert any("DisplayPort 1.2 hosts require 4 full video lanes" in limit for limit in res["limits"])
+
+
+def test_charging_with_hub_power_reservation_note() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["usb_c_pd_input_min_w"] = 45
+    laptop["ports"]["usb_c_pd_input_max_w"] = 100
+    accessory["pd_input_max_w"] = 100
+    accessory["outputs"]["charging_output_watts"] = 85
+    res = check(laptop, accessory, laptop_charging=True)
+    assert res["verdict"] == "compatible_with_limits"
+    charging_check = next(item for item in res["requirements"] if item["name"] == "Charging")
+    assert "after 15 W hub reservation from 100 W input" in charging_check["detail"]
+    assert any("after 15 W hub reservation from 100 W input" in limit for limit in res["limits"])

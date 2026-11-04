@@ -119,7 +119,6 @@ RULE_UNUSED = {
         "model_code",
         "region_variant",
         "hardware_revision",
-        "operating_system",
         "usb_c_data_rate_gbps",
         "hdmi_version",
     )
@@ -129,7 +128,6 @@ RULE_UNUSED = {
         "model_code",
         "region_variant",
         "hardware_revision",
-        "pd_input_max_w",
         "usb_a_port_count",
         "ethernet_max_gbps",
     )
@@ -228,8 +226,10 @@ RULE_DERIVED_INPUTS = {
 # grouped adapter dictionaries (for example host connection and category).
 RULE_DIRECT_INPUTS = {
     ("laptop", "usb_c_dp_version"),
+    ("laptop", "operating_system"),
     ("accessory", "category"),
     ("accessory", "host_connection"),
+    ("accessory", "pd_input_max_w"),
 }
 
 CAPABILITIES = {
