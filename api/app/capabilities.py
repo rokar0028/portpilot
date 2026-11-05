@@ -62,6 +62,7 @@ _CAPABILITY_ROWS = (
         ("usb_c_hub", "usb_c_dock", "usb_c_charger", "portable_monitor", "external_display"),
     ),
     ("requires_usb_c_dp_alt_mode", "accessory", "boolean", None, ("usb_c_hub", "usb_c_dock")),
+    ("displaylink_supported", "accessory", "boolean", None),
     ("hdmi_port_count", "accessory", "integer", "ports", ("usb_c_hub", "usb_c_dock")),
     (
         "hdmi_max_resolution",
@@ -89,6 +90,7 @@ _RULE_INPUTS = {
     "laptop": {
         "ports": {
             "usb_c_port_count": "usb_c_port_count",
+            "usb_c_data_rate_gbps": "usb_c_data_rate_gbps",
             "usb_c_video_supported": "usb_c_video_supported",
             "usb_c_pd_input_min_w": "usb_c_pd_input_min_w",
             "usb_c_pd_input_max_w": "usb_c_pd_input_max_w",
@@ -101,7 +103,10 @@ _RULE_INPUTS = {
         }
     },
     "accessory": {
-        "requirements": {"host_usb_c_video": "requires_usb_c_dp_alt_mode"},
+        "requirements": {
+            "host_usb_c_video": "requires_usb_c_dp_alt_mode",
+            "displaylink_supported": "displaylink_supported",
+        },
         "outputs": {
             "display_count": "hdmi_port_count",
             "hdmi_max_resolution": "hdmi_max_resolution",
@@ -119,7 +124,6 @@ RULE_UNUSED = {
         "model_code",
         "region_variant",
         "hardware_revision",
-        "usb_c_data_rate_gbps",
         "hdmi_version",
     )
 } | {
@@ -139,6 +143,7 @@ RULE_CONSUMED_INPUTS = {
     "laptop": {
         "ports": {
             "usb_c_port_count",
+            "usb_c_data_rate_gbps",
             "usb_c_video_supported",
             "usb_c_pd_input_min_w",
             "usb_c_pd_input_max_w",
@@ -151,7 +156,7 @@ RULE_CONSUMED_INPUTS = {
         }
     },
     "accessory": {
-        "requirements": {"host_usb_c_video"},
+        "requirements": {"host_usb_c_video", "displaylink_supported"},
         "outputs": {
             "display_count",
             "hdmi_max_resolution",
@@ -187,6 +192,7 @@ PUBLICATION_OPTIONAL = {
         "region_variant",
         "hardware_revision",
         "requires_usb_c_dp_alt_mode",
+        "displaylink_supported",
         "hdmi_port_count",
         "hdmi_max_resolution",
         "hdmi_max_refresh_hz",

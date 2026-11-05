@@ -112,6 +112,34 @@ class ResultReportRead(BaseModel):
     status: Literal["received"] = "received"
 
 
+class ResultSnapshotWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    laptop_id: str = Field(min_length=1, max_length=120)
+    accessory_id: str = Field(min_length=1, max_length=120)
+    setup: SetupRequest
+    verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    summary: str = Field(min_length=1)
+    limits: list[str] = Field(default_factory=list)
+    requirements: list[dict[str, str]] = Field(default_factory=list)
+    evidence: list[SourceEvidenceRead] = Field(default_factory=list)
+    rule_engine_version: str = Field(min_length=1, max_length=40)
+
+
+class ResultSnapshotRead(BaseModel):
+    id: str
+    laptop_id: str
+    accessory_id: str
+    setup: SetupRequest
+    verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    summary: str
+    limits: list[str]
+    requirements: list[dict[str, str]]
+    evidence: list[SourceEvidenceRead]
+    rule_engine_version: str
+    created_at: datetime
+
+
 class LaptopRead(BaseModel):
     id: str
     brand: str
@@ -149,6 +177,7 @@ class AccessoryRead(BaseModel):
     category: Literal["usb_c_hub", "usb_c_dock", "usb_c_charger", "portable_monitor", "external_display"]
     host_connection: str | None
     requires_usb_c_dp_alt_mode: bool | None
+    displaylink_supported: bool | None = None
     hdmi_port_count: int | None
     hdmi_max_resolution: str | None
     hdmi_max_refresh_hz: int | None
@@ -163,6 +192,31 @@ class AccessoryRead(BaseModel):
 
 
 class CatalogRead(BaseModel):
+    laptops: list[LaptopRead]
+    accessories: list[AccessoryRead]
+
+
+class CompatibleAccessoryItem(BaseModel):
+    accessory: AccessoryRead
+    verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    summary: str
+    limits: list[str]
+    requirements: list[dict[str, str]]
+    rule_engine_version: str
+
+
+class CompatibleAccessoriesResponse(BaseModel):
+    laptop_id: str
+    laptop_name: str
+    setup: SetupRequest
+    total_evaluated: int
+    counts: dict[str, int]
+    results: list[CompatibleAccessoryItem]
+
+
+class SearchResponse(BaseModel):
+    query: str
+    total: int
     laptops: list[LaptopRead]
     accessories: list[AccessoryRead]
 
@@ -292,6 +346,7 @@ class AccessoryWrite(BaseModel):
     category: Literal["usb_c_hub", "usb_c_dock", "usb_c_charger", "portable_monitor", "external_display"]
     host_connection: str | None = Field(default=None, min_length=1, max_length=80)
     requires_usb_c_dp_alt_mode: bool | None = None
+    displaylink_supported: bool | None = None
     hdmi_port_count: int | None = Field(default=None, ge=0)
     hdmi_max_resolution: str | None = Field(default=None, max_length=30)
     hdmi_max_refresh_hz: int | None = Field(default=None, ge=0)
@@ -304,3 +359,21 @@ class AccessoryWrite(BaseModel):
     review_status: Literal["draft", "verified", "needs_review"] = "draft"
     evidence: list[SourceEvidenceWrite] = Field(default_factory=list)
     change_reason: str | None = Field(default=None, min_length=10, max_length=1000)
+
+
+class StaleEvidenceItem(BaseModel):
+    id: str
+    entity_type: Literal["laptop", "accessory"]
+    device_id: str
+    device_name: str
+    capability_key: str
+    source_title: str
+    source_url: str
+    checked_on: date
+    age_days: int
+
+
+class StaleEvidenceResponse(BaseModel):
+    max_age_days: int
+    total_stale: int
+    stale_items: list[StaleEvidenceItem]

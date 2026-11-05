@@ -762,3 +762,140 @@ def test_charging_with_hub_power_reservation_note() -> None:
     charging_check = next(item for item in res["requirements"] if item["name"] == "Charging")
     assert "after 15 W hub reservation from 100 W input" in charging_check["detail"]
     assert any("after 15 W hub reservation from 100 W input" in limit for limit in res["limits"])
+
+
+def test_displaylink_bypasses_laptop_lacking_dp_alt_mode() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["usb_c_video_supported"] = False
+    laptop["ports"]["usb_c_max_resolution"] = None
+    laptop["ports"]["usb_c_max_refresh_hz"] = None
+    accessory["requirements"]["displaylink_supported"] = True
+    accessory["requirements"]["host_usb_c_video"] = False
+
+    res = check(laptop, accessory, external_displays=1, resolution="1920x1080", refresh_rate_hz=60)
+    assert res["verdict"] == "compatible_with_limits"
+    video_check = next(item for item in res["requirements"] if item["name"] == "USB-C video")
+    assert video_check["status"] == "passed"
+    assert "DisplayLink USB graphics" in video_check["detail"]
+    laptop_mode_check = next(item for item in res["requirements"] if item["name"] == "Laptop display mode")
+    assert laptop_mode_check["status"] == "passed"
+    assert "DisplayLink renders video via host software" in laptop_mode_check["detail"]
+    assert any("DisplayLink video output requires the DisplayLink driver" in limit for limit in res["limits"])
+
+
+def test_displaylink_bypasses_apple_m2_single_display_limit() -> None:
+    laptop, accessory = records()
+    laptop["operating_system"] = "macOS Sequoia"
+    laptop["ports"]["maximum_external_displays"] = 1
+    accessory["requirements"]["displaylink_supported"] = True
+    accessory["requirements"]["host_usb_c_video"] = False
+    accessory["outputs"]["display_count"] = 2
+
+    res = check(
+        laptop,
+        accessory,
+        external_displays=2,
+        resolution="1920x1080",
+        refresh_rate_hz=60,
+        display_topology="extended",
+    )
+    assert res["verdict"] == "compatible_with_limits"
+    count_check = next(item for item in res["requirements"] if item["name"] == "Display count")
+    assert count_check["status"] == "passed"
+    assert "bypass the laptop's native GPU limit of 1 display(s)" in count_check["detail"]
+    mst_check = next(item for item in res["requirements"] if item["name"] == "Display topology (MST)")
+    assert mst_check["status"] == "passed"
+    assert "DisplayLink without DisplayPort MST" in mst_check["detail"]
+    assert any("DisplayLink Manager" in limit for limit in res["limits"])
+
+
+def test_displaylink_exceeding_accessory_display_outputs_fails() -> None:
+    laptop, accessory = records()
+    accessory["requirements"]["displaylink_supported"] = True
+    accessory["outputs"]["display_count"] = 2
+
+    res = check(laptop, accessory, external_displays=3, resolution="1920x1080", refresh_rate_hz=60)
+    assert res["verdict"] == "incompatible"
+    accessory_outputs_check = next(
+        item for item in res["requirements"] if item["name"] == "Accessory display outputs"
+    )
+    assert accessory_outputs_check["status"] == "failed"
+    assert "Requested 3 displays; the accessory provides 2" in accessory_outputs_check["detail"]
+
+
+def test_displaylink_with_combined_simultaneous_modes() -> None:
+    laptop, accessory = records()
+    accessory["requirements"]["displaylink_supported"] = True
+    accessory["outputs"]["display_count"] = 2
+    accessory["outputs"]["display_configurations"] = [
+        {
+            "displays": [
+                {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "HDMI"},
+                {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "HDMI"},
+            ],
+            "topology": "extended",
+        }
+    ]
+    modes = [
+        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "HDMI"},
+        {"resolution": "1920x1080", "refresh_rate_hz": 60, "connection": "HDMI"},
+    ]
+    res = check(laptop, accessory, displays=modes, display_topology="extended", laptop_charging=False)
+    assert res["verdict"] == "compatible_with_limits"
+    laptop_combined = next(
+        item for item in res["requirements"] if item["name"] == "Laptop combined display mode"
+    )
+    assert laptop_combined["status"] == "passed"
+    assert "DisplayLink renders simultaneous displays via host software" in laptop_combined["detail"]
+    accessory_combined = next(
+        item for item in res["requirements"] if item["name"] == "Accessory combined display mode"
+    )
+    assert accessory_combined["status"] == "passed"
+
+
+def test_low_usb_c_data_rate_with_4k_and_peripherals_reports_limit() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["usb_c_data_rate_gbps"] = 5
+    accessory["category"] = "usb_c_hub"
+    accessory["outputs"]["usb_a_port_count"] = 2
+    accessory["outputs"]["ethernet_max_gbps"] = 1
+
+    res = check(laptop, accessory, external_displays=1, resolution="3840x2160", refresh_rate_hz=60)
+    assert res["verdict"] == "compatible_with_limits"
+    assert any("Host USB-C port is 5 Gbps" in limit for limit in res["limits"])
+
+
+def test_macos_single_display_extended_on_multi_port_hub_reports_limit() -> None:
+    laptop, accessory = records()
+    laptop["operating_system"] = "macOS"
+    accessory["category"] = "usb_c_hub"
+    accessory["host_connection"] = "USB-C"
+    accessory["outputs"]["display_count"] = 2
+    res = check(laptop, accessory, external_displays=1, display_topology="extended", laptop_charging=False)
+    assert res["verdict"] == "compatible_with_limits"
+    mst_check = next(item for item in res["requirements"] if item["name"] == "Display topology (MST)")
+    assert mst_check["status"] == "passed"
+    assert "one independent extended display" in mst_check["detail"]
+    assert any("mirror the first" in limit for limit in res["limits"])
+
+
+def test_dp_1_2_4k60_lane_bifurcation_includes_requirement_check() -> None:
+    laptop, accessory = records()
+    laptop["ports"]["usb_c_dp_version"] = "1.2"
+    accessory["category"] = "usb_c_hub"
+    accessory["host_connection"] = "USB-C"
+    res = check(
+        laptop,
+        accessory,
+        external_displays=1,
+        resolution="3840x2160",
+        refresh_rate_hz=60,
+        laptop_charging=False,
+    )
+    assert res["verdict"] == "compatible_with_limits"
+    lane_check = next(
+        item for item in res["requirements"] if item["name"] == "Display bandwidth (lane allocation)"
+    )
+    assert lane_check["status"] == "passed"
+    assert "capping 4K refresh rate to 30 Hz" in lane_check["detail"]
+    assert any("DisplayPort 1.2 hosts require 4 full video lanes" in limit for limit in res["limits"])

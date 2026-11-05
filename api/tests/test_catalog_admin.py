@@ -75,7 +75,7 @@ def verified_laptop(**overrides) -> LaptopWrite:
 
 def test_admin_routes_all_require_bearer_authentication() -> None:
     admin_routes = admin_router.routes
-    assert len(admin_routes) == 12
+    assert len(admin_routes) == 13
     assert all(any(item.dependency is require_admin for item in route.dependencies) for route in admin_routes)
 
 

@@ -30,6 +30,7 @@ type Accessory = {
   category: string;
   host_connection: string | null;
   requires_usb_c_dp_alt_mode: boolean | null;
+  displaylink_supported?: boolean | null;
   hdmi_port_count: number | null;
   hdmi_max_resolution: string | null;
   hdmi_max_refresh_hz: number | null;
@@ -63,6 +64,19 @@ type ParsedSetup = {
   clarification_questions: string[];
   unsupported_requests: string[];
   notice: string;
+};
+type CompatibleItem = {
+  accessory: Accessory;
+  verdict: string;
+  summary: string;
+  limits: string[];
+};
+type CompatibleResponse = {
+  laptop_id: string;
+  laptop_name: string;
+  total_evaluated: number;
+  counts: Record<string, number>;
+  results: CompatibleItem[];
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
@@ -100,12 +114,61 @@ export default function Home() {
   const [reportNote, setReportNote] = useState("");
   const [reportMessage, setReportMessage] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [snapshotInfo, setSnapshotInfo] = useState<{
+    id: string;
+    createdAt: string;
+    rulesVersion: string;
+  } | null>(null);
+  const [laptopFilter, setLaptopFilter] = useState("");
+  const [accessoryFilter, setAccessoryFilter] = useState("");
+  const [compatibleList, setCompatibleList] = useState<CompatibleItem[] | null>(
+    null,
+  );
+  const [loadingCompatible, setLoadingCompatible] = useState(false);
+  const [showCompatibleBrowser, setShowCompatibleBrowser] = useState(false);
+
+  const normalizeSearch = (value: string) =>
+    value.toLowerCase().replace(/[\s\-_]+/g, "");
+
+  const filteredLaptops =
+    catalog?.laptops.filter((lap) => {
+      if (!laptopFilter.trim()) return true;
+      const raw = laptopFilter.toLowerCase();
+      const norm = normalizeSearch(laptopFilter);
+      const nameNorm = normalizeSearch(lap.name);
+      const codeNorm = lap.model_code ? normalizeSearch(lap.model_code) : "";
+      return (
+        lap.name.toLowerCase().includes(raw) ||
+        nameNorm.includes(norm) ||
+        (lap.model_code && lap.model_code.toLowerCase().includes(raw)) ||
+        (codeNorm && codeNorm.includes(norm))
+      );
+    }) ?? [];
+
+  const filteredAccessories =
+    catalog?.accessories.filter((acc) => {
+      if (!accessoryFilter.trim()) return true;
+      const raw = accessoryFilter.toLowerCase();
+      const norm = normalizeSearch(accessoryFilter);
+      const nameNorm = normalizeSearch(acc.name);
+      const codeNorm = acc.model_code ? normalizeSearch(acc.model_code) : "";
+      return (
+        acc.name.toLowerCase().includes(raw) ||
+        nameNorm.includes(norm) ||
+        (acc.model_code && acc.model_code.toLowerCase().includes(raw)) ||
+        (codeNorm && codeNorm.includes(norm)) ||
+        acc.category.toLowerCase().includes(raw)
+      );
+    }) ?? [];
 
   function updateLaptopId(value: string) {
     checkRequestVersion.current += 1;
     setLoading(false);
     setLaptopId(value);
     setResult(null);
+    setSnapshotInfo(null);
+    setCompatibleList(null);
+    setShowCompatibleBrowser(false);
     setError("");
   }
 
@@ -114,6 +177,7 @@ export default function Home() {
     setLoading(false);
     setAccessoryId(value);
     setResult(null);
+    setSnapshotInfo(null);
     setError("");
     const accessory = catalog?.accessories.find((item) => item.id === value);
     if (accessory?.category === "usb_c_charger") {
@@ -131,7 +195,37 @@ export default function Home() {
     setSetup(nextSetup);
     if (parsedSetup) setParsedSetupReviewed(false);
     setResult(null);
+    setSnapshotInfo(null);
     setError("");
+  }
+
+  async function fetchCompatibleAccessories() {
+    if (!laptopId) return;
+    setLoadingCompatible(true);
+    setShowCompatibleBrowser(true);
+    try {
+      const qs = new URLSearchParams({
+        displays: String(setup.external_displays ?? 1),
+        resolution: setup.resolution ?? "1920x1080",
+        refresh_rate_hz: String(setup.refresh_rate_hz ?? 60),
+        laptop_charging: String(setup.laptop_charging ?? true),
+      });
+      const res = await fetch(
+        `${API}/devices/laptops/${laptopId}/compatible-accessories?${qs}`,
+      );
+      if (!res.ok) throw new Error("Could not load compatible accessories");
+      const data: CompatibleResponse = await res.json();
+      setCompatibleList(data.results);
+    } catch {
+      setCompatibleList([]);
+    } finally {
+      setLoadingCompatible(false);
+    }
+  }
+
+  function selectCompatibleAccessory(accId: string) {
+    updateAccessoryId(accId);
+    void runCheck(laptopId, accId, setup);
   }
 
   async function parseDescription() {
@@ -259,6 +353,38 @@ export default function Home() {
         const data: Catalog = await response.json();
         if (active) {
           const params = new URLSearchParams(window.location.search);
+          const sharedSnapshot = params.get("snapshot");
+          if (sharedSnapshot) {
+            try {
+              const snapResp = await fetch(
+                `${API}/result-snapshots/${sharedSnapshot}`,
+              );
+              if (snapResp.ok) {
+                const snap = await snapResp.json();
+                setCatalog(data);
+                setLaptopId(snap.laptop_id);
+                setAccessoryId(snap.accessory_id);
+                setSetup(snap.setup);
+                setResult({
+                  verdict: snap.verdict,
+                  summary: snap.summary,
+                  limits: snap.limits,
+                  requirements: snap.requirements,
+                  evidence: snap.evidence,
+                  rule_engine_version: snap.rule_engine_version,
+                });
+                setSnapshotInfo({
+                  id: snap.id,
+                  createdAt: snap.created_at,
+                  rulesVersion: snap.rule_engine_version,
+                });
+                return;
+              }
+            } catch {
+              // fallback to regular URL params
+            }
+          }
+
           const sharedLaptop = params.get("laptop");
           const sharedAccessory = params.get("accessory");
           const nextLaptop = data.laptops.some(
@@ -441,6 +567,44 @@ export default function Home() {
 
   async function copyShareLink() {
     try {
+      if (result && laptopId && accessoryId) {
+        try {
+          const resp = await fetch(`${API}/result-snapshots`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              laptop_id: laptopId,
+              accessory_id: accessoryId,
+              setup,
+              verdict: result.verdict,
+              summary: result.summary,
+              limits: result.limits,
+              requirements: result.requirements,
+              evidence: result.evidence,
+              rule_engine_version: result.rule_engine_version,
+            }),
+          });
+          if (resp.ok) {
+            const snap = await resp.json();
+            const snapUrl = new URL(window.location.href);
+            snapUrl.search = new URLSearchParams({
+              snapshot: snap.id,
+            }).toString();
+            window.history.replaceState({}, "", snapUrl);
+            await navigator.clipboard.writeText(snapUrl.toString());
+            setSnapshotInfo({
+              id: snap.id,
+              createdAt: snap.created_at,
+              rulesVersion: snap.rule_engine_version,
+            });
+            setShareMessage("Snapshot link copied");
+            window.setTimeout(() => setShareMessage(""), 2600);
+            return;
+          }
+        } catch {
+          // fallback
+        }
+      }
       await navigator.clipboard.writeText(window.location.href);
       setShareMessage("Link copied");
     } catch {
@@ -510,6 +674,24 @@ export default function Home() {
           <label className="field-label" htmlFor="laptop">
             Your laptop
           </label>
+          <div className="filter-input-wrap" style={{ marginBottom: "6px" }}>
+            <input
+              type="search"
+              placeholder="Filter laptops (e.g. Slim 3, M2, ThinkPad)..."
+              value={laptopFilter}
+              onChange={(event) => setLaptopFilter(event.target.value)}
+              aria-label="Filter laptops by name or model code"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-color, #333)",
+                background: "var(--input-bg, transparent)",
+                color: "inherit",
+                fontSize: "0.85rem",
+              }}
+            />
+          </div>
           <div className="select-wrap">
             <select
               id="laptop"
@@ -519,7 +701,7 @@ export default function Home() {
               disabled={!catalog}
             >
               <option value="">Choose your exact laptop model</option>
-              {catalog?.laptops.map((laptop) => (
+              {filteredLaptops.map((laptop) => (
                 <option value={laptop.id} key={laptop.id}>
                   {laptop.name}
                   {laptop.model_code ? ` · ${laptop.model_code}` : ""}
@@ -601,6 +783,189 @@ export default function Home() {
             </p>
           </details>
 
+          {selectedLaptop && (
+            <div
+              className="compatible-accessories-section"
+              style={{ marginTop: "12px", marginBottom: "8px" }}
+            >
+              <button
+                type="button"
+                className="compatible-lookup-btn"
+                onClick={() => void fetchCompatibleAccessories()}
+                disabled={loadingCompatible}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 500,
+                  borderRadius: "6px",
+                  border: "1px solid var(--accent, #3b82f6)",
+                  background: "rgba(59, 130, 246, 0.08)",
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                <span>⚡</span>
+                {loadingCompatible
+                  ? "Evaluating catalogue..."
+                  : showCompatibleBrowser
+                    ? "Refresh accessories for this laptop"
+                    : `Browse compatible accessories for this ${selectedLaptop.name.split(" ")[0]}`}
+              </button>
+
+              {showCompatibleBrowser && compatibleList && (
+                <div
+                  className="compatible-browser-card"
+                  style={{
+                    marginTop: "10px",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-color, #333)",
+                    background: "var(--card-bg, rgba(255, 255, 255, 0.03))",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                      Evaluated for requested setup ({compatibleList.length}{" "}
+                      items):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCompatibleBrowser(false)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "inherit",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                      }}
+                      aria-label="Close accessories browser"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {compatibleList.length === 0 ? (
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--muted, #888)",
+                      }}
+                    >
+                      No accessories match this setup in the verified catalogue.
+                    </p>
+                  ) : (
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                      }}
+                    >
+                      {compatibleList.map((item) => (
+                        <li
+                          key={item.accessory.id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "6px 8px",
+                            borderRadius: "4px",
+                            background:
+                              accessoryId === item.accessory.id
+                                ? "rgba(59, 130, 246, 0.15)"
+                                : "transparent",
+                            border: "1px solid var(--border-color, #222)",
+                            fontSize: "0.8rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              marginRight: "8px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 500,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {item.accessory.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.72rem",
+                                color: "var(--muted, #888)",
+                              }}
+                            >
+                              {item.accessory.model_code
+                                ? `${item.accessory.model_code} · `
+                                : ""}
+                              <span
+                                style={{
+                                  color:
+                                    item.verdict === "compatible"
+                                      ? "#22c55e"
+                                      : item.verdict ===
+                                          "compatible_with_limits"
+                                        ? "#eab308"
+                                        : "#ef4444",
+                                }}
+                              >
+                                {item.verdict === "compatible"
+                                  ? "✓ Compatible"
+                                  : item.verdict === "compatible_with_limits"
+                                    ? "! Works with limits"
+                                    : item.verdict === "incompatible"
+                                      ? "✕ Incompatible"
+                                      : "? Insufficient data"}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              selectCompatibleAccessory(item.accessory.id)
+                            }
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "0.75rem",
+                              borderRadius: "4px",
+                              border: "1px solid var(--border-color, #444)",
+                              background: "var(--input-bg, transparent)",
+                              color: "inherit",
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {accessoryId === item.accessory.id
+                              ? "Selected"
+                              : "Select"}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="connector">
             <span />
             <span />
@@ -610,6 +975,24 @@ export default function Home() {
           <label className="field-label" htmlFor="accessory">
             Connect a dock, hub or charger
           </label>
+          <div className="filter-input-wrap" style={{ marginBottom: "6px" }}>
+            <input
+              type="search"
+              placeholder="Filter accessories (e.g. Anker, Dock, Hub)..."
+              value={accessoryFilter}
+              onChange={(event) => setAccessoryFilter(event.target.value)}
+              aria-label="Filter accessories by name or model code"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-color, #333)",
+                background: "var(--input-bg, transparent)",
+                color: "inherit",
+                fontSize: "0.85rem",
+              }}
+            />
+          </div>
           <div className="select-wrap">
             <select
               id="accessory"
@@ -619,7 +1002,7 @@ export default function Home() {
               disabled={!catalog}
             >
               <option value="">Choose the exact model</option>
-              {catalog?.accessories.map((accessory) => (
+              {filteredAccessories.map((accessory) => (
                 <option value={accessory.id} key={accessory.id}>
                   {accessory.name}
                   {accessory.model_code ? ` · ${accessory.model_code}` : ""}
@@ -655,11 +1038,13 @@ export default function Home() {
                   <>
                     <br />
                     Laptop must support USB-C video:{" "}
-                    {selectedAccessory.requires_usb_c_dp_alt_mode === true
-                      ? "yes"
-                      : selectedAccessory.requires_usb_c_dp_alt_mode === false
-                        ? "no"
-                        : "not documented"}
+                    {selectedAccessory.displaylink_supported
+                      ? "no (DisplayLink USB graphics)"
+                      : selectedAccessory.requires_usb_c_dp_alt_mode === true
+                        ? "yes"
+                        : selectedAccessory.requires_usb_c_dp_alt_mode === false
+                          ? "no"
+                          : "not documented"}
                   </>
                 )}
               </p>
@@ -979,6 +1364,44 @@ export default function Home() {
                 <span aria-hidden="true">→</span>
                 <span>{selectedAccessory?.name ?? accessoryId}</span>
               </div>
+              {snapshotInfo && (
+                <div
+                  className="snapshot-notice"
+                  style={{
+                    padding: "8px 12px",
+                    background: "rgba(59, 130, 246, 0.12)",
+                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                    borderRadius: "6px",
+                    margin: "12px 0",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    📌 Pinned snapshot from{" "}
+                    {new Date(snapshotInfo.createdAt).toLocaleDateString()}
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      textDecoration: "underline",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "inherit",
+                      fontWeight: 500,
+                    }}
+                    onClick={() => {
+                      setSnapshotInfo(null);
+                      void runCheck(laptopId, accessoryId, setup);
+                    }}
+                  >
+                    Rerun with latest catalogue ↻
+                  </button>
+                </div>
+              )}
               <div
                 className={`verdict-icon ${result.verdict}`}
                 aria-hidden="true"
@@ -1020,9 +1443,40 @@ export default function Home() {
                       .map((req) => (
                         <li key={req.name}>
                           <strong>{req.name}:</strong> {req.detail}
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "0.8rem",
+                              color: "var(--muted, #94a3b8)",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {req.name.includes("Physical connection") &&
+                              "Guidance: Check the laptop’s tech specs page for the exact number and type of USB-C ports."}
+                            {req.name.includes("video") &&
+                              "Guidance: Check whether the manufacturer explicitly lists DisplayPort Alt Mode or video output."}
+                            {req.name.includes("Display count") &&
+                              "Guidance: Check CPU/GPU specs for the maximum number of external displays supported."}
+                            {req.name.includes("mode") &&
+                              "Guidance: Look for the maximum external resolution and refresh rate in the user manual."}
+                            {req.name.includes("Charging") &&
+                              "Guidance: Check the original power adapter wattage and USB Power Delivery input requirements."}
+                          </div>
                         </li>
                       ))}
                   </ul>
+                  <div style={{ marginTop: "10px", fontSize: "0.82rem" }}>
+                    <Link
+                      href="/coverage#unknown-specifications"
+                      style={{
+                        color: "var(--accent, #60a5fa)",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      How PortPilot handles unknown specifications &amp;
+                      evidence standards →
+                    </Link>
+                  </div>
                 </div>
               )}
               <button

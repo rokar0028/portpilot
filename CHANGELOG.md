@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-11-05
+
+### Overview
+PortPilot v2.1.0 delivers immutable result snapshots for verifiable audit sharing, DisplayLink virtual graphics driver protocol evaluation, reverse compatible-accessories lookup, instant multi-device catalogue search, declarative JSON seed specification ingestion, automated manufacturer citation staleness audits, and native Google GenAI SDK integration.
+
+### Highlights
+- **Immutable Result Snapshots:** Share checks via `/snapshots/{id}` with cryptographically/database-preserved verdict, limitations, and citations, preventing URL drift while supporting on-demand reruns.
+- **DisplayLink Protocol Engine:** Evaluates universal docks utilizing virtual graphics compression over USB data, overcoming native single-display limits (e.g. base M1/M2/M3 Apple Silicon) with clear driver notices.
+- **Reverse Accessory Lookup:** Discovers all compatible hubs, docks, and chargers for any laptop with display and charging filters.
+- **Instant Search:** Multi-device search API (`/devices/search`) and normalized real-time filtering in the web UI.
+- **Declarative Specification Seeding:** CLI (`seed_from_spec.py`) for dry-run validation and ingestion of structured device JSON specifications.
+- **Evidence Freshness Auditing:** CLI tool and admin endpoint auditing manufacturer citations older than 180 days.
+- **Google GenAI SDK:** Direct support for `google.genai` with Gemini 2.0 Flash in the natural language setup parser.
+- **Rules Engine 0.5.0:** Physical bus fidelity accounting for macOS MST mirroring, 2-lane DP 1.2 high-speed bifurcation trade-offs, and net charging pass-through margin checking.
+
+---
+
 ## [2.0.0] - 2026-11-04
 
 ### Overview

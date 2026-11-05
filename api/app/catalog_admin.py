@@ -29,6 +29,8 @@ from .schemas import (
     LaptopWrite,
     SourceEvidenceRead,
     SourceEvidenceWrite,
+    StaleEvidenceItem,
+    StaleEvidenceResponse,
 )
 
 router = APIRouter(prefix="/admin", tags=["catalogue administration"], dependencies=[Depends(require_admin)])
@@ -588,3 +590,56 @@ def update_accessory(
     record.evidence = _source_records(device_id, payload.evidence, owner="accessory")
     _save(session, record)
     return _accessory_read(record, identity_warnings)
+
+
+@router.get("/evidence/stale", response_model=StaleEvidenceResponse)
+def get_stale_evidence(
+    max_age_days: int = Query(default=180, ge=1),
+    session: Session = Depends(get_session),
+) -> StaleEvidenceResponse:
+    cutoff_date = date.today() - timedelta(days=max_age_days)
+    evidences = session.scalars(
+        select(SourceEvidence)
+        .where(
+            SourceEvidence.review_status == "verified",
+            SourceEvidence.checked_on < cutoff_date,
+        )
+        .options(
+            selectinload(SourceEvidence.laptop),
+            selectinload(SourceEvidence.accessory),
+        )
+        .order_by(SourceEvidence.checked_on.asc())
+    ).all()
+
+    stale_items: list[StaleEvidenceItem] = []
+    today = date.today()
+    for ev in evidences:
+        if ev.laptop:
+            entity_type = "laptop"
+            device_id = ev.laptop_id or ""
+            device_name = ev.laptop.name
+        else:
+            entity_type = "accessory"
+            device_id = ev.accessory_id or ""
+            device_name = ev.accessory.name if ev.accessory else ""
+
+        age_days = (today - ev.checked_on).days
+        stale_items.append(
+            StaleEvidenceItem(
+                id=ev.id,
+                entity_type=entity_type,
+                device_id=device_id,
+                device_name=device_name,
+                capability_key=ev.capability_key,
+                source_title=ev.source_title,
+                source_url=ev.source_url,
+                checked_on=ev.checked_on,
+                age_days=age_days,
+            )
+        )
+
+    return StaleEvidenceResponse(
+        max_age_days=max_age_days,
+        total_stale=len(stale_items),
+        stale_items=stale_items,
+    )

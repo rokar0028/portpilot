@@ -70,6 +70,7 @@ class AccessoryModel(Base):
     category: Mapped[str] = mapped_column(String(32), nullable=False)
     host_connection: Mapped[str | None] = mapped_column(String(80))
     requires_usb_c_dp_alt_mode: Mapped[bool | None] = mapped_column(nullable=True)
+    displaylink_supported: Mapped[bool | None] = mapped_column(nullable=True)
     hdmi_port_count: Mapped[int | None] = mapped_column(Integer)
     hdmi_max_resolution: Mapped[str | None] = mapped_column(String(30))
     hdmi_max_refresh_hz: Mapped[int | None] = mapped_column(Integer)
@@ -168,4 +169,20 @@ class ResultReport(Base):
     verdict: Mapped[str] = mapped_column(String(32), nullable=False)
     rule_engine_version: Mapped[str] = mapped_column(String(40), nullable=False)
     note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(nullable=False)
+
+
+class ResultSnapshot(Base):
+    __tablename__ = "result_snapshots"
+
+    id: Mapped[str] = mapped_column(String(180), primary_key=True)
+    laptop_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    accessory_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    setup: Mapped[dict] = mapped_column(JSON, nullable=False)
+    verdict: Mapped[str] = mapped_column(String(32), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    limits: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    requirements: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    evidence: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    rule_engine_version: Mapped[str] = mapped_column(String(40), nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False)

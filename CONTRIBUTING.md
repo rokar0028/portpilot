@@ -123,7 +123,7 @@ PortPilot contributions typically fall into one of five tracks:
   1. Locate the exact manufacturer product specification or manual.
   2. Extract the precise manufacturer model code (e.g. `83DH000AUS`), regional variant, and hardware revision.
   3. Extract factual quotes for each populated capability with source URLs and checked dates.
-  4. Add the record to [`api/app/seed.py`](api/app/seed.py) using `validate_seed_record()`, or submit via the authenticated Admin API (`/admin/laptops` or `/admin/accessories`).
+  4. Add the record to [`api/app/seed.py`](api/app/seed.py) using `validate_seed_record()`, ingest a JSON specification file via `python scripts/seed_from_spec.py <spec.json>` (see templates in `api/specs/examples/`), or submit via the authenticated Admin API (`/admin/laptops` or `/admin/accessories`).
   5. If competing or conflicting claims exist, follow the [Source Review Playbook](docs/source-review-playbook.md).
 
 ### Track 2: Extending Capabilities & Data Fields

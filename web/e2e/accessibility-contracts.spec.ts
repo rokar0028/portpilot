@@ -403,7 +403,7 @@ test.describe("Screen-Reader & ARIA Contract Test Suite (WS-6)", () => {
             },
           ],
           evidence: [],
-          rule_engine_version: "0.4.0",
+          rule_engine_version: "0.5.0",
         }),
       }),
     );

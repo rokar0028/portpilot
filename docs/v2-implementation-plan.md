@@ -139,14 +139,28 @@ Establish the shared baseline that lets the other workstreams land without dupli
 
 **Plan:** [Workstream 11 implementation plan](v2-workstream-11-implementation-plan.md). Evaluates real-world protocol physics and operating system constraints to eliminate false-positive compatibility verdicts commonly returned by commercial e-commerce filters and LLMs.
 
-- [ ] Add macOS DisplayPort Multi-Stream Transport (MST) vs. Single-Stream Transport (SST) rule: flag extended multi-display setups over standard USB-C Alt Mode docks as incompatible or limited to mirrored display.
-- [ ] Add USB 3.0 vs. 4K@60Hz high-speed lane bifurcation rule: model the 2-lane DP trade-off on DP 1.2 hosts when the dock provides USB 3.0 data.
-- [ ] Add net Power Delivery pass-through margin calculation ($W_{\text{charger}} - W_{\text{hub\_overhead}}$) against host minimum input wattage.
-- [ ] Expand the verified catalogue with high-impact hardware (Apple Silicon MacBooks, Dell XPS/WD19, Lenovo ThinkPads).
-- [ ] Enhance UI diagnostic transparency for "Insufficient data" results and step-by-step physical bus breakdown.
-- [ ] Maintain 0-error code quality (`ruff check`, `ruff format`, pytest).
+- [x] Add macOS DisplayPort Multi-Stream Transport (MST) vs. Single-Stream Transport (SST) rule: flag extended multi-display setups over standard USB-C Alt Mode docks as incompatible or limited to mirrored display.
+- [x] Add USB 3.0 vs. 4K@60Hz high-speed lane bifurcation rule: model the 2-lane DP trade-off on DP 1.2 hosts when the dock provides USB 3.0 data.
+- [x] Add net Power Delivery pass-through margin calculation ($W_{\text{charger}} - W_{\text{hub\_overhead}}$) against host minimum input wattage.
+- [x] Expand the verified catalogue with high-impact hardware (Apple Silicon MacBooks, Dell XPS/WD19, Lenovo ThinkPads).
+- [x] Enhance UI diagnostic transparency for "Insufficient data" results and step-by-step physical bus breakdown.
+- [x] Maintain 0-error code quality (`ruff check`, `ruff format`, pytest).
 
 **Completion criteria:** multi-display macOS setups and high-resolution DP 1.2 lane constraints evaluate with protocol accuracy; net power margins account for hub overhead; and newly seeded devices have verified manufacturer evidence. Detailed tracking is in [Workstream 11 implementation plan](v2-workstream-11-implementation-plan.md).
+
+### 12. Immutable result snapshots, DisplayLink protocol, reverse lookup, and declarative ingestion
+
+**Plan:** [Workstream 12 implementation plan](v2-workstream-12-implementation-plan.md). Provides verifiable audit sharing, virtual graphics protocol evaluation, catalogue discoverability, and maintainable JSON spec ingestion.
+
+- [x] Implement database-backed immutable result snapshots (`POST /snapshots`, `GET /snapshots/{id}`, migration `20261105_0008_result_snapshots.py`) for verifiable audit trail and permanent sharing links with fallback rerun.
+- [x] Add DisplayLink virtual graphics driver protocol evaluation in rules engine 0.5.0 (`displaylink_supported`, migration `20261105_0007_displaylink_supported.py`), bypassing native GPU external display limits with clear driver requirements.
+- [x] Add reverse accessory lookup endpoint (`GET /devices/laptops/{device_id}/compatible-accessories`) with display and charging filters and interactive frontend browsing.
+- [x] Add instant multi-device search API (`GET /devices/search`) and real-time dropdown filtering in the UI.
+- [x] Add declarative JSON specification seeder CLI (`seed_from_spec.py`) with `--dry-run` and remote API ingestion.
+- [x] Add automated evidence freshness auditing (`check_evidence_staleness.py` and `GET /admin/evidence/stale`).
+- [x] Add direct Google GenAI SDK integration with Gemini 2.0 Flash in `setup_parser.py`.
+
+**Completion criteria:** snapshots provide immutable verification records; DisplayLink docks evaluate accurately; reverse lookup discovers compatible gear; and declarative tooling simplifies catalogue expansion and freshness audits. Tracked in [Workstream 12 implementation plan](v2-workstream-12-implementation-plan.md).
 
 ## Suggested implementation order
 
@@ -159,13 +173,14 @@ Establish the shared baseline that lets the other workstreams land without dupli
 7. [x] Define the response-time target, improve latency monitoring, and document migration recovery. Implementation and verification details are recorded in [Workstream 7 implementation plan](v2-workstream-7-implementation-plan.md) and [Database operations and migration recovery runbook](database-operations-runbook.md).
 8. [x] Run and publish a live-provider parser evaluation (benchmark, runner, mock harness, and unit tests verified; live evaluation protocol documented).
 9. [x] Deploy an isolated preview, complete end-to-end verification and release checks, then make a release decision. Work is recorded in [Workstream 9 implementation plan](v2-workstream-9-implementation-plan.md) and [Preview and release playbook](preview-and-release-playbook.md).
-10. [ ] Implement Workstream 11 protocol fidelity (macOS MST, DP lane bifurcation, net PD calculations, and expanded catalogue seeds).
+10. [x] Implement Workstream 11 protocol fidelity (macOS MST, DP lane bifurcation, net PD calculations, and expanded catalogue seeds).
+11. [x] Implement Workstream 12 immutable result snapshots, DisplayLink routing, reverse lookup, instant search, declarative seeder, and freshness audits.
 
 Dependencies may change as implementation reveals details. Keep this document updated with decisions and completion notes rather than treating the suggested order as a rigid schedule.
 
-**Current sequencing:** Workstreams 0–5 and 7–10 are complete. Workstream 11 extends physical bus fidelity and catalogue depth. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md), [Database operations runbook](database-operations-runbook.md), and [Preview and release playbook](preview-and-release-playbook.md).
+**Current sequencing:** Workstreams 0–5, 7–12 are complete. Workstream 6 (screen-reader manual audio pass) remains the only open task pending a recorded screen-reader hardware pass. Migration and rollback details for schema/API changes are in [V2 migration and rollout notes](v2-migration-rollout.md), [Database operations runbook](database-operations-runbook.md), and [Preview and release playbook](preview-and-release-playbook.md).
 
-**Planning status:** Core V2 workstreams (Workstreams 0–5 and 7–10) are implemented and verified. Workstream 6 (screen-reader manual audio pass) and Workstream 11 (hardware protocol fidelity and bus constraints) form the active backlog.
+**Planning status:** Core V2 and V2.1 workstreams (0–5, 7–12) are fully implemented and verified. Workstream 6 (screen-reader manual audio pass) is documented with automated axe/Playwright coverage passing.
 
 ## Release acceptance checklist
 

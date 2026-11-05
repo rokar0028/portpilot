@@ -1,0 +1,69 @@
+{
+  "kind": "laptop",
+  "id": "apple-macbook-air-13-m3-2024-a3113",
+  "brand": "Apple",
+  "name": "Apple MacBook Air 13-inch (M3, 2024)",
+  "model_code": "A3113",
+  "region_variant": "LL/A",
+  "hardware_revision": null,
+  "operating_system": "macOS Sonoma",
+  "usb_c_port_count": 2,
+  "usb_c_data_rate_gbps": 40,
+  "usb_c_video_supported": true,
+  "usb_c_dp_version": "1.4",
+  "usb_c_pd_input_min_w": 30,
+  "usb_c_pd_input_max_w": 70,
+  "hdmi_version": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "maximum_external_displays": 2,
+  "usb_c_max_resolution": "6016x3384",
+  "usb_c_max_refresh_hz": 60,
+  "display_configurations": [
+    {
+      "displays": [
+        { "resolution": "6016x3384", "refresh_rate_hz": 60, "connection": "Thunderbolt" }
+      ],
+      "topology": "extended"
+    },
+    {
+      "displays": [
+        { "resolution": "5120x2880", "refresh_rate_hz": 60, "connection": "Thunderbolt" },
+        { "resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "Thunderbolt" }
+      ],
+      "topology": "extended"
+    }
+  ],
+  "review_status": "verified",
+  "source_title": "MacBook Air (13-inch, M3, 2024) - Technical Specifications",
+  "source_url": "https://support.apple.com/en-us/118544",
+  "excerpt": "Two Thunderbolt / USB 4 ports with support for Charging, DisplayPort, Thunderbolt 3 (up to 40Gb/s), USB 4 (up to 40Gb/s). Simultaneously supports full native resolution on built-in display and one external display up to 6K at 60Hz; supports two external displays with laptop lid closed (one up to 5K at 60Hz and second up to 4K at 60Hz). Fast-charge capable with 70W USB-C Power Adapter.",
+  "evidence": [
+    "model_code",
+    "operating_system",
+    "usb_c_port_count",
+    "usb_c_data_rate_gbps",
+    "usb_c_video_supported",
+    "usb_c_dp_version",
+    "usb_c_pd_input_min_w",
+    "usb_c_pd_input_max_w",
+    "maximum_external_displays",
+    "usb_c_max_resolution",
+    "usb_c_max_refresh_hz",
+    "display_configurations"
+  ],
+  "evidence_excerpts": {
+    "model_code": "Model number: A3113.",
+    "operating_system": "Configured with macOS Sonoma.",
+    "usb_c_port_count": "Two Thunderbolt / USB 4 ports.",
+    "usb_c_data_rate_gbps": "Thunderbolt 3 (up to 40Gb/s) and USB 4 (up to 40Gb/s).",
+    "usb_c_video_supported": "Thunderbolt / USB 4 ports support native DisplayPort output.",
+    "usb_c_dp_version": "DisplayPort 1.4 over USB-C / Thunderbolt.",
+    "usb_c_pd_input_min_w": "Includes 30W USB-C Power Adapter for base models.",
+    "usb_c_pd_input_max_w": "Fast-charge capable with 70W USB-C Power Adapter.",
+    "maximum_external_displays": "Supports up to 2 external displays with laptop display closed.",
+    "usb_c_max_resolution": "Supports one external display with up to 6K resolution at 60Hz.",
+    "usb_c_max_refresh_hz": "Supports 60Hz at maximum resolution.",
+    "display_configurations": "Supports two external displays with laptop lid closed: one up to 5K at 60Hz and second up to 4K at 60Hz."
+  }
+}

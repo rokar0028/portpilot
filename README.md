@@ -10,7 +10,7 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 
 The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 19 laptops and 17 accessories; three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
 
-The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL that restores those selections and reruns the check using the current catalogue and rules; the URL does not preserve the original result as a snapshot. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
+The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL containing an immutable result snapshot (`?snapshot=<id>`) that preserves the verified verdict, summary, limitations, and citations, while also providing a fallback rerun mode when opened. Quick-filter search boxes let you quickly narrow down laptops and accessories by model name or code. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 
 The [coverage and limitations page](/coverage) reports live verified catalogue counts and explains how PortPilot handles manufacturer evidence and unknown specifications.
 
@@ -64,7 +64,7 @@ The direct workflow uses a local SQLite file by default. The API is at http://lo
 
 Each source record identifies the capability it supports, with a manufacturer URL, short factual excerpt, and checked date. Evidence review status is `draft`, `verified`, or `needs_review`. A capability that is not documented stays null; it is not treated as unsupported.
 
-### Catalogue administration
+### Catalogue administration and seeding
 
 Catalogue writes use the protected API. Set a long random `ADMIN_API_TOKEN` in `api/.env` for local API development. For Docker Compose, set the same variable in the shell before starting Compose; if it is absent, catalogue administration stays disabled. For example in PowerShell:
 
@@ -74,6 +74,33 @@ docker compose up --build
 ```
 
 In `/docs`, authorize with the value as a bearer token, then use `GET`, `POST`, and `PUT` under `/admin/laptops` and `/admin/accessories`. New records default to `draft`, and drafts remain editable while incomplete. To publish, set `review_status` to `verified`, provide the category's required specifications, and attach verified manufacturer evidence for the model code and each populated capability. Updates replace the evidence list for that device. Only verified records appear in the public catalogue and can be used in checks. Do not commit API tokens or place them in request examples.
+
+#### Declarative JSON Seed Ingestion
+
+You can also seed or update device records declaratively from specification JSON files:
+
+```powershell
+# Dry-run validation against Pydantic schema and capability registry
+python scripts/seed_from_spec.py specs/examples/plugable-ud-6950z.json --dry-run
+
+# Ingest into local SQLite or configured DATABASE_URL
+python scripts/seed_from_spec.py specs/examples/plugable-ud-6950z.json
+
+# Or ingest via authenticated API endpoint
+python scripts/seed_from_spec.py specs/examples/plugable-ud-6950z.json --api-url http://127.0.0.1:8001 --token $env:ADMIN_API_TOKEN
+```
+
+#### Evidence Staleness Audits
+
+To audit manufacturer citations and ensure evidence remains fresh:
+
+```powershell
+# Audit local database for verified evidence older than 180 days
+python scripts/check_evidence_staleness.py --max-age-days 180
+
+# Or audit a running API deployment
+python scripts/check_evidence_staleness.py --api-url http://127.0.0.1:8001 --token $env:ADMIN_API_TOKEN
+```
 
 ### Frontend
 
@@ -113,6 +140,7 @@ ruff format --check app migrations tests scripts
 python -m pytest tests -q
 python scripts/evaluate_setup_parser.py --mock
 python scripts/verify_preview_deployment.py --api-url http://127.0.0.1:8001
+python scripts/check_evidence_staleness.py --warn-only
 
 # web/
 npm run lint
@@ -175,11 +203,12 @@ flowchart LR
 ```
 
 - The API is the source of truth for verified devices. Draft and review-needed records stay private.
-- The Python rules engine calculates every verdict. It does not infer device specifications; missing required values produce **Insufficient data**.
-- Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow and protected admin API require evidence for populated published fields.
+- The Python rules engine (version 0.5.0) calculates every verdict deterministically. It accounts for DP Alt Mode, DisplayPort MST vs. macOS SST mirroring, Thunderbolt daisy-chaining, DisplayLink software driver routing, and USB-C host bandwidth contention. It does not infer device specifications; missing required values produce **Insufficient data**.
+- Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow, JSON spec ingestion CLI, and protected admin API require evidence for populated published fields.
 - PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
-- The verified catalogue currently contains 19 laptops and 17 accessories: USB-C hubs, USB-C docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
-- The evaluator test suite in `tests/test_rules.py` covers 72 distinct compatibility scenarios. The complete API test suite passes 129 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the production build also pass.
+- The verified catalogue currently publishes laptops and accessories spanning USB-C hubs, USB-C docks, Thunderbolt docks, DisplayLink docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
+- Reverse lookup is supported via `GET /devices/laptops/{device_id}/compatible-accessories` with display and charging filters, alongside instant catalogue search via `GET /devices/search`.
+- The evaluator test suite in `tests/test_rules.py` covers 77 distinct compatibility scenarios. The complete API test suite passes 154 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the production build also pass.
 
 The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, and protocol fidelity rules are complete.
 

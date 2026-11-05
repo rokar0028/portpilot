@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
@@ -8,14 +9,14 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
-from sqlalchemy import select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
 from .capabilities import derived_rule_fields, rule_fields
 from .catalog_admin import router as catalog_admin_router
 from .database import get_session
-from .models import AccessoryModel, LaptopModel, ResultReport, SourceEvidence
+from .models import AccessoryModel, LaptopModel, ResultReport, ResultSnapshot, SourceEvidence
 from .observability import current_request_id, log_event, metrics, request_id_context
 from .rules import evaluate
 from .schemas import (
@@ -23,11 +24,17 @@ from .schemas import (
     CatalogRead,
     CheckRequest,
     CheckResponse,
+    CompatibleAccessoriesResponse,
+    CompatibleAccessoryItem,
     LaptopRead,
     ResultReportRead,
     ResultReportWrite,
+    ResultSnapshotRead,
+    ResultSnapshotWrite,
+    SearchResponse,
     SetupParseRequest,
     SetupParseResponse,
+    SetupRequest,
     SourceEvidenceRead,
 )
 from .setup_parser import ParserInvalidResponse, ParserUnavailable, parse_setup
@@ -222,6 +229,88 @@ def devices(session: Session = Depends(get_session)) -> CatalogRead:
     )
 
 
+@app.get("/devices/search", response_model=SearchResponse)
+def search_devices(
+    q: str = "",
+    category: str | None = None,
+    kind: str | None = None,
+    session: Session = Depends(get_session),
+) -> SearchResponse:
+    query_str = q.strip()
+    matched_laptops: list[LaptopRead] = []
+    matched_accessories: list[AccessoryRead] = []
+    pattern = f"%{query_str}%" if query_str else None
+    stripped = re.sub(r"[\s\-_]+", "", query_str) if query_str else ""
+    norm_pattern = f"%{stripped}%" if stripped else None
+
+    if kind != "accessory" and not category:
+        lap_stmt = select(LaptopModel).where(LaptopModel.review_status == "verified")
+        if pattern:
+            lap_conditions = [
+                LaptopModel.name.ilike(pattern),
+                LaptopModel.brand.ilike(pattern),
+                LaptopModel.model_code.ilike(pattern),
+            ]
+            if norm_pattern:
+                norm_model = func.replace(
+                    func.replace(func.replace(LaptopModel.model_code, "-", ""), " ", ""), "_", ""
+                )
+                norm_name = func.replace(
+                    func.replace(func.replace(LaptopModel.name, "-", ""), " ", ""), "_", ""
+                )
+                lap_conditions.extend(
+                    [
+                        norm_model.ilike(norm_pattern),
+                        norm_name.ilike(norm_pattern),
+                    ]
+                )
+            lap_stmt = lap_stmt.where(or_(*lap_conditions))
+        elif not query_str and kind != "laptop":
+            lap_stmt = None
+
+        if lap_stmt is not None:
+            laptops = session.scalars(lap_stmt.options(selectinload(LaptopModel.evidence))).all()
+            matched_laptops = [laptop_read(lap) for lap in laptops]
+
+    if kind != "laptop":
+        acc_stmt = select(AccessoryModel).where(AccessoryModel.review_status == "verified")
+        if pattern:
+            acc_conditions = [
+                AccessoryModel.name.ilike(pattern),
+                AccessoryModel.brand.ilike(pattern),
+                AccessoryModel.model_code.ilike(pattern),
+            ]
+            if norm_pattern:
+                norm_model = func.replace(
+                    func.replace(func.replace(AccessoryModel.model_code, "-", ""), " ", ""), "_", ""
+                )
+                norm_name = func.replace(
+                    func.replace(func.replace(AccessoryModel.name, "-", ""), " ", ""), "_", ""
+                )
+                acc_conditions.extend(
+                    [
+                        norm_model.ilike(norm_pattern),
+                        norm_name.ilike(norm_pattern),
+                    ]
+                )
+            acc_stmt = acc_stmt.where(or_(*acc_conditions))
+        if category:
+            acc_stmt = acc_stmt.where(AccessoryModel.category == category)
+        elif not pattern and kind != "accessory":
+            acc_stmt = None
+
+        if acc_stmt is not None:
+            accessories = session.scalars(acc_stmt.options(selectinload(AccessoryModel.evidence))).all()
+            matched_accessories = [accessory_read(acc) for acc in accessories]
+
+    return SearchResponse(
+        query=query_str,
+        total=len(matched_laptops) + len(matched_accessories),
+        laptops=matched_laptops,
+        accessories=matched_accessories,
+    )
+
+
 @app.post("/setup-requests/parse", response_model=SetupParseResponse)
 def parse_setup_request(request: SetupParseRequest) -> SetupParseResponse:
     try:
@@ -256,6 +345,91 @@ def laptop_detail(device_id: str, session: Session = Depends(get_session)) -> La
             status_code=404, detail={"code": "laptop_not_found", "message": "Laptop not found."}
         )
     return laptop_read(record)
+
+
+@app.get(
+    "/devices/laptops/{device_id}/compatible-accessories",
+    response_model=CompatibleAccessoriesResponse,
+)
+def laptop_compatible_accessories(
+    device_id: str,
+    displays: int | None = 1,
+    resolution: str | None = "1920x1080",
+    refresh_rate_hz: int | None = 60,
+    laptop_charging: bool | None = True,
+    category: str | None = None,
+    verdict: str | None = None,
+    session: Session = Depends(get_session),
+) -> CompatibleAccessoriesResponse:
+    laptop = session.scalar(
+        select(LaptopModel)
+        .where(LaptopModel.id == device_id, LaptopModel.review_status == "verified")
+        .options(selectinload(LaptopModel.evidence))
+    )
+    if laptop is None:
+        raise HTTPException(
+            status_code=404, detail={"code": "laptop_not_found", "message": "Laptop not found."}
+        )
+
+    setup = SetupRequest(
+        external_displays=displays,
+        resolution=resolution,
+        refresh_rate_hz=refresh_rate_hz,
+        laptop_charging=laptop_charging,
+    )
+
+    query = (
+        select(AccessoryModel)
+        .where(AccessoryModel.review_status == "verified")
+        .options(selectinload(AccessoryModel.evidence))
+    )
+    if category:
+        query = query.where(AccessoryModel.category == category)
+
+    accessories = session.scalars(query).all()
+    laptop_dict = laptop_rule_record(laptop)
+
+    results: list[CompatibleAccessoryItem] = []
+    counts: dict[str, int] = {
+        "compatible": 0,
+        "compatible_with_limits": 0,
+        "incompatible": 0,
+        "insufficient_data": 0,
+    }
+
+    for acc in accessories:
+        acc_dict = accessory_rule_record(acc)
+        check_req = CheckRequest(
+            laptop_id=laptop.id,
+            accessory_id=acc.id,
+            setup=setup,
+        )
+        check_result = evaluate(check_req, laptop_dict, acc_dict)
+        verdict_val = check_result["verdict"]
+        counts[verdict_val] = counts.get(verdict_val, 0) + 1
+
+        if verdict and verdict_val != verdict:
+            continue
+
+        results.append(
+            CompatibleAccessoryItem(
+                accessory=accessory_read(acc),
+                verdict=verdict_val,
+                summary=check_result["summary"],
+                limits=check_result["limits"],
+                requirements=check_result["requirements"],
+                rule_engine_version=check_result["rule_engine_version"],
+            )
+        )
+
+    return CompatibleAccessoriesResponse(
+        laptop_id=laptop.id,
+        laptop_name=laptop.name,
+        setup=setup,
+        total_evaluated=len(accessories),
+        counts=counts,
+        results=results,
+    )
 
 
 @app.get("/devices/accessories/{device_id}", response_model=AccessoryRead)
@@ -338,3 +512,67 @@ def create_result_report(
     session.commit()
     log_event("result_report_received", verdict=request.verdict)
     return ResultReportRead(id=report.id)
+
+
+@app.post("/result-snapshots", response_model=ResultSnapshotRead, status_code=201)
+def create_result_snapshot(
+    request: ResultSnapshotWrite,
+    session: Session = Depends(get_session),
+) -> ResultSnapshotRead:
+    snapshot_id = f"snap-{uuid4().hex}"
+    now = datetime.now(UTC)
+    snapshot = ResultSnapshot(
+        id=snapshot_id,
+        laptop_id=request.laptop_id,
+        accessory_id=request.accessory_id,
+        setup=request.setup.model_dump(mode="json"),
+        verdict=request.verdict,
+        summary=request.summary,
+        limits=request.limits,
+        requirements=request.requirements,
+        evidence=[e.model_dump(mode="json") for e in request.evidence],
+        rule_engine_version=request.rule_engine_version,
+        created_at=now,
+    )
+    session.add(snapshot)
+    session.commit()
+    log_event("result_snapshot_created", snapshot_id=snapshot_id, verdict=request.verdict)
+    return ResultSnapshotRead(
+        id=snapshot.id,
+        laptop_id=snapshot.laptop_id,
+        accessory_id=snapshot.accessory_id,
+        setup=request.setup,
+        verdict=snapshot.verdict,
+        summary=snapshot.summary,
+        limits=snapshot.limits,
+        requirements=snapshot.requirements,
+        evidence=request.evidence,
+        rule_engine_version=snapshot.rule_engine_version,
+        created_at=snapshot.created_at,
+    )
+
+
+@app.get("/result-snapshots/{snapshot_id}", response_model=ResultSnapshotRead)
+def get_result_snapshot(
+    snapshot_id: str,
+    session: Session = Depends(get_session),
+) -> ResultSnapshotRead:
+    snapshot = session.scalar(select(ResultSnapshot).where(ResultSnapshot.id == snapshot_id))
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "snapshot_not_found", "message": "Result snapshot not found."},
+        )
+    return ResultSnapshotRead(
+        id=snapshot.id,
+        laptop_id=snapshot.laptop_id,
+        accessory_id=snapshot.accessory_id,
+        setup=SetupRequest.model_validate(snapshot.setup),
+        verdict=snapshot.verdict,
+        summary=snapshot.summary,
+        limits=snapshot.limits,
+        requirements=snapshot.requirements,
+        evidence=[SourceEvidenceRead.model_validate(e) for e in snapshot.evidence],
+        rule_engine_version=snapshot.rule_engine_version,
+        created_at=snapshot.created_at,
+    )

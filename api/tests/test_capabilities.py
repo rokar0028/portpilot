@@ -17,6 +17,8 @@ def test_registry_is_consistent_across_models_schemas_publication_and_rules() ->
         "host_connection",
         "usb_c_output_max_w",
     }
+    assert ("accessory", "displaylink_supported") in capabilities.CAPABILITIES
+    assert ("accessory", "displaylink_supported") in capabilities.PUBLICATION_OPTIONAL
 
 
 def test_evidence_keys_are_scoped_to_registered_entity() -> None:

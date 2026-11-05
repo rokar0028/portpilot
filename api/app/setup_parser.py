@@ -43,6 +43,34 @@ def _provider_settings() -> tuple[str, str, str | None, float]:
 
 
 def parse_setup(description: str) -> SetupParseResponse:
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
+            from google.genai import types
+
+            gemini_model = os.getenv("GEMINI_MODEL") or os.getenv("SETUP_PARSER_MODEL") or "gemini-2.0-flash"
+            client = genai.Client(api_key=gemini_key)
+            response = client.models.generate_content(
+                model=gemini_model,
+                contents=description,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                    response_schema=SetupParseResponse,
+                ),
+            )
+            if response.text:
+                return SetupParseResponse.model_validate_json(response.text)
+            raise ParserInvalidResponse("The setup parser returned empty response. Use manual setup fields.")
+        except (ParserUnavailable, ParserInvalidResponse):
+            raise
+        except Exception as error:
+            raise ParserUnavailable(
+                f"The setup parser provider is unavailable: {error}. Use manual setup fields."
+            ) from error
+
     base_url, model, api_key, timeout = _provider_settings()
     payload = {
         "model": model,

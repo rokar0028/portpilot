@@ -3,7 +3,7 @@ from typing import Any
 
 from .schemas import CheckRequest
 
-RULE_ENGINE_VERSION = "0.4.0"
+RULE_ENGINE_VERSION = "0.5.0"
 
 
 def _normalize_resolution(value: str) -> str:
@@ -165,12 +165,23 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         add("Display count", "unknown", "The requested external display count is not established.")
     elif requested_count:
         is_charger = accessory.get("category") == "usb_c_charger"
+        is_displaylink = requirements.get("displaylink_supported") is True
         dp_required = requirements.get("host_usb_c_video")
         if is_charger:
             add(
                 "USB-C video",
                 "failed",
                 "The accessory is a charger and does not support video output.",
+            )
+        elif is_displaylink:
+            add(
+                "USB-C video",
+                "passed",
+                "The accessory uses DisplayLink USB graphics; native DisplayPort Alt Mode is not required.",
+            )
+            limits.append(
+                "DisplayLink video output requires the DisplayLink driver/manager software to be installed "
+                "on the host operating system."
             )
         elif dp_required is True:
             video_supported = ports.get("usb_c_video_supported")
@@ -198,7 +209,32 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
             )
 
         laptop_display_limit = ports.get("maximum_external_displays")
-        if laptop_display_limit is None:
+        if is_displaylink:
+            if laptop_display_limit is not None and requested_count > laptop_display_limit:
+                add(
+                    "Display count",
+                    "passed",
+                    "DisplayLink virtual displays are driven by software and bypass the laptop's native GPU "
+                    f"limit of {laptop_display_limit} display(s).",
+                )
+                limits.append(
+                    "DisplayLink virtual displays bypass native GPU display limits but require host "
+                    "software drivers and increase CPU utilization."
+                )
+            elif laptop_display_limit is not None:
+                add(
+                    "Display count",
+                    "passed",
+                    f"Requested display count is within the laptop limit of {laptop_display_limit}.",
+                )
+            else:
+                add(
+                    "Display count",
+                    "passed",
+                    "DisplayLink virtual displays are driven by software over USB data and bypass native "
+                    "GPU display limits.",
+                )
+        elif laptop_display_limit is None:
             add(
                 "Display count",
                 "unknown",
@@ -287,23 +323,62 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         is_macos = "macos" in os_name or "os x" in os_name or os_name.startswith("mac")
         host_conn = (accessory.get("host_connection") or "").strip().lower()
         is_thunderbolt = "thunderbolt" in host_conn or "usb4" in host_conn
+        acc_display_count = outputs.get("display_count") or 0
 
-        if requested_count > 1 and is_macos and not is_charger and not is_display:
+        multi_display_requested = requested_count is not None and requested_count > 1
+        multi_port_extended_requested = (
+            setup.display_topology == "extended"
+            and not is_charger
+            and not is_display
+            and acc_display_count > 1
+        )
+
+        should_evaluate_mst = (
+            (multi_display_requested or multi_port_extended_requested)
+            and is_macos
+            and not is_charger
+            and not is_display
+        )
+        if should_evaluate_mst:
             if is_thunderbolt:
                 add(
                     "Display topology (MST)",
                     "passed",
                     "macOS supports multiple independent external displays over Thunderbolt / USB4.",
                 )
+            elif is_displaylink:
+                add(
+                    "Display topology (MST)",
+                    "passed",
+                    "macOS supports multiple independent extended displays via DisplayLink without "
+                    "DisplayPort MST.",
+                )
+                limits.append(
+                    "On macOS, DisplayLink requires the DisplayLink Manager application to provide "
+                    "multiple extended displays."
+                )
             else:
                 topology = setup.display_topology.strip().lower() if setup.display_topology else None
                 if topology == "extended":
-                    add(
-                        "Display topology (MST)",
-                        "failed",
-                        "macOS does not support DisplayPort Multi-Stream Transport (MST) over "
-                        "standard USB-C; multiple external displays cannot be extended independently.",
-                    )
+                    if requested_count == 1:
+                        add(
+                            "Display topology (MST)",
+                            "passed",
+                            "macOS supports one independent extended display over standard USB-C. "
+                            "Additional displays connected to this hub will mirror.",
+                        )
+                        limits.append(
+                            "On macOS, this multi-port hub supports only one independent extended display "
+                            "over standard USB-C; connecting a second display will mirror the first "
+                            "(macOS does not support DisplayPort MST)."
+                        )
+                    else:
+                        add(
+                            "Display topology (MST)",
+                            "failed",
+                            "macOS does not support DisplayPort Multi-Stream Transport (MST) over "
+                            "standard USB-C; multiple external displays cannot be extended independently.",
+                        )
                 else:
                     add(
                         "Display topology (MST)",
@@ -319,59 +394,99 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
         if (
             dp_version == "1.2"
             and not is_thunderbolt
+            and not is_displaylink
             and accessory.get("category") in {"usb_c_hub", "usb_c_dock"}
         ):
             norm_res = _normalize_resolution(requested_resolution) if requested_resolution else ""
             if norm_res == "3840x2160" and requested_refresh and requested_refresh >= 60:
+                add(
+                    "Display bandwidth (lane allocation)",
+                    "passed",
+                    "DisplayPort 1.2 with active USB 3.0 data is limited to 2 video lanes, "
+                    "capping 4K refresh rate to 30 Hz.",
+                )
                 limits.append(
                     "DisplayPort 1.2 hosts require 4 full video lanes for 4K at 60 Hz; "
                     "hubs providing USB 3.0 data speeds reduce video to 2 lanes, "
                     "limiting output to 4K at 30 Hz."
                 )
 
-        if dp_required is True:
-            laptop_resolution = ports.get("usb_c_max_resolution")
-            laptop_refresh = ports.get("usb_c_max_refresh_hz")
-        elif dp_required is False:
-            laptop_resolution = None
-            laptop_refresh = None
-        else:
-            laptop_resolution = None
-            laptop_refresh = None
+        data_rate = ports.get("usb_c_data_rate_gbps")
+        if (
+            data_rate is not None
+            and not is_displaylink
+            and accessory.get("category") in {"usb_c_hub", "usb_c_dock"}
+        ):
+            norm_res = _normalize_resolution(requested_resolution) if requested_resolution else ""
+            is_high_res = norm_res in {"3840x2160", "5120x2880", "6016x3384", "7680x4320"}
+            has_data_ports = bool(outputs.get("usb_a_port_count") or outputs.get("ethernet_max_gbps"))
+            if data_rate <= 5 and is_high_res and has_data_ports:
+                limits.append(
+                    f"Host USB-C port is {data_rate} Gbps (USB 3.2 Gen 1); driving high-resolution "
+                    "video while using USB data ports shares physical bus bandwidth, which may limit "
+                    "refresh rates or throttle peripheral speeds."
+                )
+            elif data_rate <= 10 and norm_res in {"5120x2880", "6016x3384", "7680x4320"}:
+                limits.append(
+                    f"Host USB-C data rate is {data_rate} Gbps; ultra-high resolutions "
+                    f"({requested_resolution}) may require Display Stream Compression (DSC) or reduce "
+                    "available peripheral data bandwidth."
+                )
+
         combined_modes_requested = setup.displays is not None and (
             len(setup.displays) > 1 or setup.display_topology is not None
         )
-        laptop_mode_ok = (
-            None
-            if combined_modes_requested
-            else _mode_at_least(laptop_resolution, laptop_refresh, requested_resolution, requested_refresh)
-        )
-        if laptop_mode_ok is None and not combined_modes_requested:
-            add(
-                "Laptop display mode",
-                "unknown",
-                "The laptop source does not establish the maximum mode for this display path.",
-            )
-        elif laptop_mode_ok and not combined_modes_requested:
+
+        if is_displaylink and not combined_modes_requested:
             add(
                 "Laptop display mode",
                 "passed",
-                f"The laptop supports at least {requested_resolution} at "
-                f"{requested_refresh} Hz on this path.",
+                "DisplayLink renders video via host software over USB data; "
+                "laptop DisplayPort Alt Mode limits do not apply.",
             )
-        elif not combined_modes_requested:
-            add(
-                "Laptop display mode",
-                "failed",
-                f"The requested {requested_resolution} at {requested_refresh} Hz "
-                "exceeds the laptop's documented maximum.",
+        else:
+            if dp_required is True:
+                laptop_resolution = ports.get("usb_c_max_resolution")
+                laptop_refresh = ports.get("usb_c_max_refresh_hz")
+            elif dp_required is False:
+                laptop_resolution = None
+                laptop_refresh = None
+            else:
+                laptop_resolution = None
+                laptop_refresh = None
+            laptop_mode_ok = (
+                None
+                if combined_modes_requested
+                else _mode_at_least(
+                    laptop_resolution, laptop_refresh, requested_resolution, requested_refresh
+                )
             )
+            if laptop_mode_ok is None and not combined_modes_requested:
+                add(
+                    "Laptop display mode",
+                    "unknown",
+                    "The laptop source does not establish the maximum mode for this display path.",
+                )
+            elif laptop_mode_ok and not combined_modes_requested:
+                add(
+                    "Laptop display mode",
+                    "passed",
+                    f"The laptop supports at least {requested_resolution} at "
+                    f"{requested_refresh} Hz on this path.",
+                )
+            elif not combined_modes_requested:
+                add(
+                    "Laptop display mode",
+                    "failed",
+                    f"The requested {requested_resolution} at {requested_refresh} Hz "
+                    "exceeds the laptop's documented maximum.",
+                )
 
-        if dp_required is False and not combined_modes_requested:
-            checks[-1]["detail"] = (
-                "The accessory does not require DisplayPort Alt Mode, but its alternate video path "
-                "from the laptop is not modeled."
-            )
+            if dp_required is False and not combined_modes_requested:
+                checks[-1]["detail"] = (
+                    "The accessory does not require DisplayPort Alt Mode, but its alternate video path "
+                    "from the laptop is not modeled."
+                )
 
         if is_charger and not combined_modes_requested:
             add(
@@ -430,6 +545,14 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                         "multiple simultaneous displays.",
                     )
                     continue
+                if label == "Laptop" and is_displaylink:
+                    add(
+                        "Laptop combined display mode",
+                        "passed",
+                        "DisplayLink renders simultaneous displays via host software over USB data; "
+                        "laptop DisplayPort Alt Mode configurations do not apply.",
+                    )
+                    continue
                 if label == "Laptop" and dp_required is False:
                     add(
                         "Laptop combined display mode",
@@ -468,12 +591,20 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                         "aggregate bandwidth or lane allocation.",
                     )
         elif requested_count > 1:
-            add(
-                "Combined display mode",
-                "unknown",
-                "The request specifies a display count but not each simultaneous mode; the sources do not "
-                "establish the combined configuration, aggregate bandwidth, or lane allocation.",
-            )
+            if is_displaylink:
+                add(
+                    "Combined display mode",
+                    "passed",
+                    "DisplayLink handles multiple displays via host software compression over USB data "
+                    "without DisplayPort lane allocation constraints.",
+                )
+            else:
+                add(
+                    "Combined display mode",
+                    "unknown",
+                    "The request specifies a display count but not each simultaneous mode; the sources "
+                    "do not establish the combined configuration, aggregate bandwidth, or lane allocation.",
+                )
 
     if setup.laptop_charging is None:
         add("Charging", "unknown", "Whether laptop charging is required is not established.")

@@ -282,3 +282,56 @@ def test_parser_handles_markdown_code_fenced_json(monkeypatch):
     assert parsed.setup.external_displays == 1
     assert parsed.setup.resolution == "1920x1080"
     assert parsed.setup.laptop_charging is True
+
+
+def test_gemini_parser_success(monkeypatch):
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
+    monkeypatch.delenv("SETUP_PARSER_BASE_URL", raising=False)
+
+    fake_response_json = json.dumps(
+        {
+            "setup": {
+                "external_displays": 2,
+                "resolution": "3840x2160",
+                "refresh_rate_hz": 60,
+                "laptop_charging": True,
+            },
+            "needs_clarification": False,
+            "clarification_questions": [],
+            "unsupported_requests": [],
+        }
+    )
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = fake_response_json
+    mock_client.models.generate_content.return_value = mock_response
+
+    import google.genai
+
+    monkeypatch.setattr(google.genai, "Client", lambda api_key: mock_client)
+
+    parsed = setup_parser.parse_setup("Two 4K monitors and laptop charging")
+    assert parsed.setup.external_displays == 2
+    assert parsed.setup.resolution == "3840x2160"
+    assert parsed.setup.laptop_charging is True
+
+
+def test_gemini_parser_unavailable_on_client_error(monkeypatch):
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
+    monkeypatch.delenv("SETUP_PARSER_BASE_URL", raising=False)
+
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = RuntimeError("API connection failure")
+
+    import google.genai
+
+    monkeypatch.setattr(google.genai, "Client", lambda api_key: mock_client)
+
+    with pytest.raises(ParserUnavailable) as exc_info:
+        setup_parser.parse_setup("Two 4K monitors")
+    assert "unavailable" in str(exc_info.value).lower()
