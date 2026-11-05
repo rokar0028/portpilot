@@ -597,7 +597,7 @@ export default function Home() {
               createdAt: snap.created_at,
               rulesVersion: snap.rule_engine_version,
             });
-            setShareMessage("Snapshot link copied");
+            setShareMessage("Link copied");
             window.setTimeout(() => setShareMessage(""), 2600);
             return;
           }
@@ -1469,7 +1469,7 @@ export default function Home() {
                     <Link
                       href="/coverage#unknown-specifications"
                       style={{
-                        color: "var(--accent, #60a5fa)",
+                        color: "#1d4ed8",
                         textDecoration: "underline",
                       }}
                     >

@@ -309,9 +309,9 @@ def test_gemini_parser_success(monkeypatch):
     mock_response.text = fake_response_json
     mock_client.models.generate_content.return_value = mock_response
 
-    import google.genai
+    genai = pytest.importorskip("google.genai")
 
-    monkeypatch.setattr(google.genai, "Client", lambda api_key: mock_client)
+    monkeypatch.setattr(genai, "Client", lambda api_key: mock_client)
 
     parsed = setup_parser.parse_setup("Two 4K monitors and laptop charging")
     assert parsed.setup.external_displays == 2
@@ -328,9 +328,9 @@ def test_gemini_parser_unavailable_on_client_error(monkeypatch):
     mock_client = MagicMock()
     mock_client.models.generate_content.side_effect = RuntimeError("API connection failure")
 
-    import google.genai
+    genai = pytest.importorskip("google.genai")
 
-    monkeypatch.setattr(google.genai, "Client", lambda api_key: mock_client)
+    monkeypatch.setattr(genai, "Client", lambda api_key: mock_client)
 
     with pytest.raises(ParserUnavailable) as exc_info:
         setup_parser.parse_setup("Two 4K monitors")
