@@ -567,44 +567,6 @@ export default function Home() {
 
   async function copyShareLink() {
     try {
-      if (result && laptopId && accessoryId) {
-        try {
-          const resp = await fetch(`${API}/result-snapshots`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              laptop_id: laptopId,
-              accessory_id: accessoryId,
-              setup,
-              verdict: result.verdict,
-              summary: result.summary,
-              limits: result.limits,
-              requirements: result.requirements,
-              evidence: result.evidence,
-              rule_engine_version: result.rule_engine_version,
-            }),
-          });
-          if (resp.ok) {
-            const snap = await resp.json();
-            const snapUrl = new URL(window.location.href);
-            snapUrl.search = new URLSearchParams({
-              snapshot: snap.id,
-            }).toString();
-            window.history.replaceState({}, "", snapUrl);
-            await navigator.clipboard.writeText(snapUrl.toString());
-            setSnapshotInfo({
-              id: snap.id,
-              createdAt: snap.created_at,
-              rulesVersion: snap.rule_engine_version,
-            });
-            setShareMessage("Link copied");
-            window.setTimeout(() => setShareMessage(""), 2600);
-            return;
-          }
-        } catch {
-          // fallback
-        }
-      }
       await navigator.clipboard.writeText(window.location.href);
       setShareMessage("Link copied");
     } catch {
