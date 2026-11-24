@@ -1,0 +1,60 @@
+{
+  "kind": "accessory",
+  "id": "plugable-ud-6950z-dock",
+  "brand": "Plugable",
+  "name": "Plugable Dual 4K Display Docking Station UD-6950Z",
+  "model_code": "UD-6950Z",
+  "region_variant": "US",
+  "hardware_revision": null,
+  "category": "usb_c_dock",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": false,
+  "displaylink_supported": true,
+  "hdmi_port_count": 2,
+  "hdmi_max_resolution": "3840x2160",
+  "hdmi_max_refresh_hz": 60,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": 6,
+  "ethernet_max_gbps": 1,
+  "display_configurations": [
+    {
+      "displays": [
+        { "resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "HDMI" },
+        { "resolution": "3840x2160", "refresh_rate_hz": 60, "connection": "HDMI" }
+      ],
+      "topology": "extended"
+    }
+  ],
+  "review_status": "verified",
+  "source_title": "Plugable UD-6950Z Product Specifications and Manual",
+  "source_url": "https://plugable.com/products/ud-6950z",
+  "excerpt": "Dual 4K Display Horizontal Docking Station with DisplayLink DL-6950. Connects via USB-C or USB 3.0 Type-A. Dual 4K 60Hz HDMI or DisplayPort outputs. 6x USB 3.0 ports, Gigabit Ethernet. Powered by included 20V/2.5A power adapter (does not charge host PC).",
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "requires_usb_c_dp_alt_mode",
+    "displaylink_supported",
+    "hdmi_port_count",
+    "hdmi_max_resolution",
+    "hdmi_max_refresh_hz",
+    "usb_a_port_count",
+    "ethernet_max_gbps",
+    "display_configurations"
+  ],
+  "evidence_excerpts": {
+    "model_code": "Product SKU: UD-6950Z.",
+    "category": "Plugable classifies the UD-6950Z as a universal docking station.",
+    "host_connection": "Includes USB-C to USB-C cable and USB-A to USB-C adapter.",
+    "requires_usb_c_dp_alt_mode": "Uses DisplayLink USB graphics; does not require DisplayPort Alternate Mode.",
+    "displaylink_supported": "Powered by DisplayLink DL-6950 chipset.",
+    "hdmi_port_count": "Dual 4K outputs via 2x HDMI 2.0 or 2x DisplayPort 1.2 ports.",
+    "hdmi_max_resolution": "Supports up to 4K (3840x2160) per display.",
+    "hdmi_max_refresh_hz": "Supports 60Hz refresh rate at 4K resolution.",
+    "usb_a_port_count": "6x USB 3.0 (USB 5Gbps) Type-A ports.",
+    "ethernet_max_gbps": "1x Gigabit Ethernet (10/100/1000 Mbps RJ45) port.",
+    "display_configurations": "Supports simultaneous dual 4K displays at 60Hz in extended mode."
+  }
+}

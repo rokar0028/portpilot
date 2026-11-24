@@ -1,0 +1,36 @@
+{
+  "id": "anker-715-usb-c-charger-65w",
+  "brand": "Anker",
+  "name": "Anker 715 Charger (Nano II 65W)",
+  "model_code": "A2663",
+  "category": "usb_c_charger",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": null,
+  "hdmi_port_count": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": 65,
+  "usb_a_port_count": 0,
+  "ethernet_max_gbps": null,
+  "review_status": "verified",
+  "source_title": "Anker 715 Charger product specifications",
+  "source_url": "https://www.anker.com/products/a2663",
+  "excerpt": "Anker lists one USB-C output port with a maximum 65W output and no USB-A output port.",
+  "evidence_excerpts": {
+    "model_code": "Anker 715 Charger model number A2663.",
+    "category": "Anker describes the product as a 65W USB-C wall charger.",
+    "host_connection": "The charger has one USB-C output port.",
+    "usb_c_output_max_w": "USB-C output: 20V at 3.25A (65W max).",
+    "usb_a_port_count": "Total USB-A ports: 0."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "usb_c_output_max_w",
+    "usb_a_port_count"
+  ],
+  "kind": "accessory"
+}

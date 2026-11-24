@@ -1,0 +1,84 @@
+{
+  "id": "lenovo-thinkpad-universal-usb-c-dock-40ay",
+  "brand": "Lenovo",
+  "name": "Lenovo ThinkPad Universal USB-C Dock",
+  "model_code": "40AY0090US",
+  "region_variant": "US",
+  "hardware_revision": null,
+  "category": "usb_c_dock",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": true,
+  "hdmi_port_count": 1,
+  "hdmi_max_resolution": "3840x2160",
+  "hdmi_max_refresh_hz": 60,
+  "pd_input_max_w": 90,
+  "pd_pass_through_max_w": 65,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": 3,
+  "ethernet_max_gbps": 1,
+  "display_configurations": [
+    {
+      "displays": [
+        {
+          "resolution": "3840x2160",
+          "refresh_rate_hz": 60,
+          "connection": "DisplayPort"
+        },
+        {
+          "resolution": "3840x2160",
+          "refresh_rate_hz": 60,
+          "connection": "HDMI"
+        }
+      ],
+      "topology": "extended"
+    },
+    {
+      "displays": [
+        {
+          "resolution": "1920x1080",
+          "refresh_rate_hz": 60,
+          "connection": "DisplayPort"
+        },
+        {
+          "resolution": "1920x1080",
+          "refresh_rate_hz": 60,
+          "connection": "HDMI"
+        }
+      ],
+      "topology": "extended"
+    }
+  ],
+  "review_status": "verified",
+  "source_title": "Lenovo Support: ThinkPad Universal USB-C Dock Overview and Service Parts",
+  "source_url": "https://support.lenovo.com/us/en/solutions/pd500519-thinkpad-universal-usb-c-dock-overview-and-service-parts",
+  "excerpt": "ThinkPad Universal USB-C Dock (40AY). Connects via USB-C cable. Requires DisplayPort Alt Mode. Provides 1x HDMI 2.0 port up to 4K@60Hz and 2x DisplayPort 1.4 ports. Supports dual 4K@60Hz displays via DP and HDMI. Delivers up to 65W host power charging with included 90W power adapter. 3x USB 3.2 Gen 2 Type-A ports, Gigabit Ethernet (RJ-45).",
+  "evidence_excerpts": {
+    "model_code": "Marketing Part Number: 40AY0090US; Machine Type: 40AY.",
+    "category": "Lenovo designates the device as a Universal USB-C Dock.",
+    "host_connection": "Connects to host system through attached USB-C cable.",
+    "requires_usb_c_dp_alt_mode": "Host system requires USB-C DisplayPort Alt Mode.",
+    "hdmi_port_count": "1 x HDMI 2.0 port.",
+    "hdmi_max_resolution": "HDMI port supports resolution up to 3840 x 2160 (4K).",
+    "hdmi_max_refresh_hz": "HDMI supports 60Hz refresh rate at 4K resolution.",
+    "pd_input_max_w": "Powered by ThinkPad 90W Slim Tip AC adapter.",
+    "pd_pass_through_max_w": "Delivers up to 65W Power Delivery to attached notebook.",
+    "usb_a_port_count": "3 x USB 3.2 Gen 2 Type-A ports.",
+    "ethernet_max_gbps": "1 x Gigabit Ethernet port (RJ-45, 10/100/1000 Mbps).",
+    "display_configurations": "Supports simultaneous dual external displays up to 3840x2160 at 60Hz across DP and HDMI in extended desktop topology."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "requires_usb_c_dp_alt_mode",
+    "hdmi_port_count",
+    "hdmi_max_resolution",
+    "hdmi_max_refresh_hz",
+    "pd_input_max_w",
+    "pd_pass_through_max_w",
+    "usb_a_port_count",
+    "ethernet_max_gbps",
+    "display_configurations"
+  ],
+  "kind": "accessory"
+}

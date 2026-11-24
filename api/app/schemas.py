@@ -55,6 +55,7 @@ class CheckRequest(BaseModel):
     laptop_id: str = Field(min_length=1, max_length=120)
     accessory_id: str = Field(min_length=1, max_length=120)
     setup: SetupRequest = Field(default_factory=default_setup_request)
+    evaluation_tier: Literal["verified", "theoretical"] | None = None
 
 
 class SetupParseRequest(BaseModel):
@@ -89,6 +90,7 @@ class IdentityWarning(BaseModel):
 
 class CheckResponse(BaseModel):
     verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    evaluation_tier: Literal["verified", "theoretical"] = "verified"
     summary: str
     limits: list[str]
     requirements: list[dict[str, str]]
@@ -119,6 +121,7 @@ class ResultSnapshotWrite(BaseModel):
     accessory_id: str = Field(min_length=1, max_length=120)
     setup: SetupRequest
     verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    evaluation_tier: Literal["verified", "theoretical"] = "verified"
     summary: str = Field(min_length=1)
     limits: list[str] = Field(default_factory=list)
     requirements: list[dict[str, str]] = Field(default_factory=list)
@@ -132,6 +135,7 @@ class ResultSnapshotRead(BaseModel):
     accessory_id: str
     setup: SetupRequest
     verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    evaluation_tier: Literal["verified", "theoretical"] = "verified"
     summary: str
     limits: list[str]
     requirements: list[dict[str, str]]
@@ -199,6 +203,7 @@ class CatalogRead(BaseModel):
 class CompatibleAccessoryItem(BaseModel):
     accessory: AccessoryRead
     verdict: Literal["compatible", "compatible_with_limits", "incompatible", "insufficient_data"]
+    evaluation_tier: Literal["verified", "theoretical"] = "verified"
     summary: str
     limits: list[str]
     requirements: list[dict[str, str]]

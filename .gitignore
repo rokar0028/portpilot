@@ -9,6 +9,9 @@ api/.venv/
 api/portpilot.db
 api/*.sqlite
 api/*.sqlite3
+*.db
+*.sqlite
+*.sqlite3
 .venv/
 *.log
 *.err
@@ -20,6 +23,7 @@ node_modules/
 web/node_modules/
 web/.next/
 web/.next-e2e/
+.next-backup-*/
 web/out/
 web/test-results/
 web/playwright-report/
@@ -31,3 +35,9 @@ web/next-env.d.ts
 .env
 .env.*
 !.env.example
+
+# Generated reports and local review material
+output/
+tmp/
+retry_materials/
+review_work/

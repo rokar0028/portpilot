@@ -1,0 +1,34 @@
+{
+  "id": "belkin-boostcharge-65w-wca011",
+  "brand": "Belkin",
+  "name": "Belkin BoostCharge Compact USB-C Wall Charger 65W",
+  "model_code": "WCA011",
+  "category": "usb_c_charger",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": null,
+  "hdmi_port_count": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": 65,
+  "usb_a_port_count": null,
+  "ethernet_max_gbps": null,
+  "review_status": "verified",
+  "source_title": "Belkin WCA011 Support",
+  "source_url": "https://www.belkin.com/support-article/?articleNum=337468",
+  "excerpt": "Official Belkin product specifications for WCA011.",
+  "evidence_excerpts": {
+    "model_code": "Belkin identifies this charger as model WCA011.",
+    "category": "Belkin describes the product as a USB-C wall charger.",
+    "host_connection": "The charger has one USB-C output port.",
+    "usb_c_output_max_w": "Maximum USB-C output is 65W."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "usb_c_output_max_w"
+  ],
+  "kind": "accessory"
+}

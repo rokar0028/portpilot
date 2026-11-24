@@ -1,0 +1,32 @@
+{
+  "id": "anker-prime-charger-100w-a2343",
+  "brand": "Anker",
+  "name": "Anker Prime Charger 100W",
+  "model_code": "A2343",
+  "category": "usb_c_charger",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": null,
+  "hdmi_port_count": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": null,
+  "ethernet_max_gbps": null,
+  "review_status": "needs_review",
+  "source_title": "Anker Prime 100W Charger specifications",
+  "source_url": "https://service.anker.com/product-description/a085g0000050Q24AAE",
+  "excerpt": "Official Anker product specifications for A2343.",
+  "evidence_excerpts": {
+    "model_code": "Anker identifies the charger as model A2343.",
+    "category": "Anker describes the product as a multiport charger.",
+    "host_connection": "The charger provides power through USB-C ports."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection"
+  ],
+  "kind": "accessory"
+}

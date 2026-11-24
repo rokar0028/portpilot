@@ -1,0 +1,84 @@
+{
+  "id": "dell-wd19s-130w-dock",
+  "brand": "Dell",
+  "name": "Dell WD19S 130W USB-C Dock",
+  "model_code": "K20A001",
+  "region_variant": null,
+  "hardware_revision": null,
+  "category": "usb_c_dock",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": true,
+  "hdmi_port_count": 1,
+  "hdmi_max_resolution": "3840x2160",
+  "hdmi_max_refresh_hz": 60,
+  "pd_input_max_w": 130,
+  "pd_pass_through_max_w": 90,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": 3,
+  "ethernet_max_gbps": 1,
+  "display_configurations": [
+    {
+      "displays": [
+        {
+          "resolution": "3840x2160",
+          "refresh_rate_hz": 60,
+          "connection": "DisplayPort"
+        },
+        {
+          "resolution": "3840x2160",
+          "refresh_rate_hz": 60,
+          "connection": "HDMI"
+        }
+      ],
+      "topology": "extended"
+    },
+    {
+      "displays": [
+        {
+          "resolution": "1920x1080",
+          "refresh_rate_hz": 60,
+          "connection": "DisplayPort"
+        },
+        {
+          "resolution": "1920x1080",
+          "refresh_rate_hz": 60,
+          "connection": "HDMI"
+        }
+      ],
+      "topology": "extended"
+    }
+  ],
+  "review_status": "verified",
+  "source_title": "Dell WD19S Docking Station User Guide and Specifications",
+  "source_url": "https://www.dell.com/support/manuals/en-us/dell-wd19s-130w-dock/wd19s_user_guide/",
+  "excerpt": "Dell Docking Station WD19S (Regulatory Model: K20A001). Connects via attached USB Type-C cable. Requires DisplayPort over USB Type-C host support. 1x HDMI 2.0b, 2x DisplayPort 1.4. Supports dual 4K displays at 60Hz or dual FHD displays in extended desktop mode. Powered by 130W AC adapter, delivering up to 90W Power Delivery to Dell laptops and 65W to non-Dell laptops. 3x USB 3.1 Gen 1 Type-A, 1x Gigabit Ethernet (RJ-45).",
+  "evidence_excerpts": {
+    "model_code": "Regulatory Model: K20A; Regulatory Type: K20A001.",
+    "category": "Dell identifies device as Dell Docking Station WD19S.",
+    "host_connection": "Connects to host system via attached USB Type-C cable.",
+    "requires_usb_c_dp_alt_mode": "Host system requires DisplayPort Alternate Mode over USB Type-C.",
+    "hdmi_port_count": "One HDMI 2.0b port.",
+    "hdmi_max_resolution": "HDMI 2.0b supports maximum resolution of 3840 x 2160 (4K).",
+    "hdmi_max_refresh_hz": "Supports refresh rate up to 60Hz at 4K resolution.",
+    "pd_input_max_w": "Powered by 130W AC power adapter.",
+    "pd_pass_through_max_w": "Delivers up to 90W power to Dell systems and 65W to non-Dell systems.",
+    "usb_a_port_count": "Three USB 3.1 Gen 1 Type-A ports.",
+    "ethernet_max_gbps": "One Gigabit Ethernet port (RJ-45, 1 Gbps).",
+    "display_configurations": "Supports dual external displays up to 3840x2160 at 60Hz or 1920x1080 at 60Hz in extended mode."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "requires_usb_c_dp_alt_mode",
+    "hdmi_port_count",
+    "hdmi_max_resolution",
+    "hdmi_max_refresh_hz",
+    "pd_input_max_w",
+    "pd_pass_through_max_w",
+    "usb_a_port_count",
+    "ethernet_max_gbps",
+    "display_configurations"
+  ],
+  "kind": "accessory"
+}

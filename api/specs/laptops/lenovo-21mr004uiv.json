@@ -1,0 +1,37 @@
+{
+  "id": "lenovo-21mr004uiv",
+  "brand": "Lenovo",
+  "name": "ThinkBook 14 G7 IML",
+  "model_code": "21MR004UIV",
+  "region_variant": null,
+  "operating_system": null,
+  "usb_c_port_count": 2,
+  "usb_c_data_rate_gbps": null,
+  "usb_c_video_supported": true,
+  "usb_c_dp_version": "1.4",
+  "usb_c_pd_input_min_w": null,
+  "usb_c_pd_input_max_w": null,
+  "hdmi_version": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "maximum_external_displays": null,
+  "usb_c_max_resolution": null,
+  "usb_c_max_refresh_hz": null,
+  "review_status": "verified",
+  "source_title": "Lenovo PSREF: ThinkBook 14 G7 IML (21MR004UIV)",
+  "source_url": "https://psref.lenovo.com/Detail/ThinkBook/ThinkBook_14_G7_IML?M=21MR004UIV",
+  "excerpt": "USB-C 10Gbps with DP 1.4; Thunderbolt 4/USB4 40Gbps with DP 2.1.",
+  "evidence_excerpts": {
+    "model_code": "Lenovo PSREF identifies this configuration as model 21MR004UIV.",
+    "usb_c_port_count": "USB-C 10Gbps with DP 1.4; Thunderbolt 4/USB4 40Gbps with DP 2.1.",
+    "usb_c_video_supported": "USB-C 10Gbps with DP 1.4; Thunderbolt 4/USB4 40Gbps with DP 2.1.",
+    "usb_c_dp_version": "Minimum specified DisplayPort version across the model's USB-C ports: DP 1.4."
+  },
+  "evidence": [
+    "model_code",
+    "usb_c_port_count",
+    "usb_c_video_supported",
+    "usb_c_dp_version"
+  ],
+  "kind": "laptop"
+}

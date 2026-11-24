@@ -1,6 +1,22 @@
 # PortPilot
 
-PortPilot checks whether a laptop and accessory support a requested setup. Verdicts come from deterministic rules over documented specifications; missing required facts produce **Insufficient data**.
+PortPilot checks whether a laptop and accessory support a requested setup. Verdicts come from deterministic rules over documented specifications and hardware protocols; missing required facts produce **Insufficient data** rather than guessing.
+
+## Why PortPilot: What It Actually Solves
+
+Online retailers (Amazon, Best Buy) and general LLMs frequently provide false-positive compatibility answers because they treat USB-C as a uniform standard. In reality, USB-C is merely a physical shape that conceals widely divergent protocols, bandwidth limits, and operating system quirks. PortPilot prevents users from making expensive buying mistakes by checking real-world physical constraints:
+
+1. **The macOS Multi-Stream Transport (MST) Trap:** Standard USB-C multi-display docks rely on DisplayPort MST to extend separate desktops to 2+ monitors. macOS refuses to support MST over standard USB-C, forcing all connected external monitors to mirror each other. PortPilot flags this incompatibility before users purchase an unusable multi-port dock.
+2. **The High-Speed Lane Bifurcation Bottleneck:** Driving 4K at 60 Hz over DisplayPort 1.2 requires all 4 high-speed lanes on a USB-C connector. Connecting a hub that provides USB 3.0 data speeds steals 2 lanes for data, capping video output to 4K at 30 Hz. PortPilot identifies and warns about these bandwidth trade-offs.
+3. **Net Power Delivery Pass-Through Deficits:** USB-C hubs reserve 15W–30W of input power for internal chipsets and ports. If a 65W wall charger is plugged into a hub with a 15W reservation, it delivers only 50W to a laptop requiring 65W, causing slow-charge or battery drain under load. PortPilot calculates net power margins ($W_{\text{input}} - W_{\text{reservation}}$) against host requirements.
+4. **GPU Display Limits & DisplayLink Software Routing:** Base Apple Silicon chips (M1, M2, M3, M4) natively support only one external display. PortPilot verifies whether multi-display docks use native DisplayPort Alt Mode (which fails on base Macs) or DisplayLink USB software compression (which bypasses native GPU limits with background drivers).
+
+## Two-Tier Compatibility Architecture
+
+PortPilot operates on a two-tier evaluation model that guarantees transparency:
+
+- **Tier 1: Verified Manufacturer Evidence (🛡️ Verified):** Exact hardware model matching where every capability is backed by an active manufacturer specification URL citation, verbatim excerpt, and checked date. Missing required fields produce **Insufficient data**.
+- **Tier 2: Theoretical Protocol Evaluation (⚙️ Theoretical):** Standard hardware protocol profiles (such as *Thunderbolt 4 Host*, *USB-C 3.2 Gen 2 DP 1.4 Host*, *Apple Silicon Base Architecture*, *Universal Thunderbolt 4 Dock*, and *Dual HDMI MST Dock*). This allows users whose exact laptop or accessory is not yet curated to evaluate their setup against official USB-IF, VESA, and Intel protocol standards.
 
 ## Current vertical slice
 
@@ -8,7 +24,7 @@ PortPilot checks whether a laptop and accessory support a requested setup. Verdi
 - Accessory: Anker Nano Hub (7-in-1, A83D2)
 - Setup: one 1080p external display plus laptop charging
 
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 19 laptops and 17 accessories; three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
+The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 22 laptops and 24 accessories (including verified vendor hardware and standard protocol profiles); three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
 
 The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL containing an immutable result snapshot (`?snapshot=<id>`) that preserves the verified verdict, summary, limitations, and citations, while also providing a fallback rerun mode when opened. Quick-filter search boxes let you quickly narrow down laptops and accessories by model name or code. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
 
@@ -202,17 +218,20 @@ flowchart LR
   Rules --> Result[Verdict, requirements, limits, evidence]
 ```
 
-- The API is the source of truth for verified devices. Draft and review-needed records stay private.
-- The Python rules engine (version 0.5.0) calculates every verdict deterministically. It accounts for DP Alt Mode, DisplayPort MST vs. macOS SST mirroring, Thunderbolt daisy-chaining, DisplayLink software driver routing, and USB-C host bandwidth contention. It does not infer device specifications; missing required values produce **Insufficient data**.
-- Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. The seed workflow, JSON spec ingestion CLI, and protected admin API require evidence for populated published fields.
+- The API is the source of truth for verified devices and protocol baselines. Draft and review-needed records stay private.
+- The Python rules engine (version 0.6.0) calculates every verdict deterministically over two tiers: **Verified Manufacturer Evidence** and **Theoretical Protocol Evaluation**. It accounts for DP Alt Mode, DisplayPort MST vs. macOS SST mirroring, Thunderbolt daisy-chaining and bandwidth tunneling, DisplayLink software driver routing, and USB-C host bandwidth contention. It does not infer device specifications; missing required values produce **Insufficient data**.
+- Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. Device records are declared as clean JSON specifications under `api/specs/laptops/` and `api/specs/accessories/`. The seed workflow, JSON spec ingestion CLI (`seed_from_spec.py`), and protected admin API require evidence for populated published fields.
 - PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
-- The verified catalogue currently publishes laptops and accessories spanning USB-C hubs, USB-C docks, Thunderbolt docks, DisplayLink docks, USB-C chargers, and portable monitors. Three accessories remain in `needs_review`; other accessory categories remain future coverage, not a promise that a compatible result is available for every product.
+- The verified catalogue currently publishes 22 laptops and 24 accessories spanning exact vendor hardware (Apple, Dell, Lenovo, Anker, Belkin, Ugreen, Plugable) and standard hardware protocol profiles (Thunderbolt 4, USB-C 3.2 Gen 2, Apple Silicon Base Architecture, Dual MST Docks). Three accessories remain in `needs_review`.
 - Reverse lookup is supported via `GET /devices/laptops/{device_id}/compatible-accessories` with display and charging filters, alongside instant catalogue search via `GET /devices/search`.
-- The evaluator test suite in `tests/test_rules.py` covers 77 distinct compatibility scenarios. The complete API test suite passes 154 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the production build also pass.
+- The evaluator test suite in `tests/test_rules.py` and `tests/test_two_tier_evaluation.py` covers real-world compatibility scenarios and physical protocol constraints. The complete API test suite passes 163 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the Next.js production build also pass.
 
-The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, and protocol fidelity rules are complete.
+The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, two-tier evaluation, and protocol fidelity rules are complete.
 
 ## Operations and monitoring
+
+- **Public reporting and privacy:** `POST /result-reports` accepts only the selected device IDs, setup, verdict, rules version, and an optional note of up to 1,000 characters. Reports are unauthenticated, rate-limited per process, and retained in the configured database for operational review. Do not submit names, contact details, secrets, or other personal information. Production deployments should add durable rate limiting, abuse monitoring, and a documented retention/deletion policy at the edge or database layer.
+- **Metrics access:** `GET /metrics` is intentionally unauthenticated for local and simple preview monitoring. In production, expose it only through a private network, authenticated monitoring gateway, or equivalent access control.
 
 - **Health and readiness:** `GET /health` is a database-independent liveness check. `GET /ready` checks database connectivity and returns only a generic not-ready response (`503 not_ready`) on failure without exposing credentials or internal database errors.
 - **Service Level Objective (SLO):** PortPilot's API response-time objective is p95 server duration $\le 500$ ms at 5 requests/second over a 30-minute steady-state window for the weighted deterministic request mix (40% `GET /devices`, 30% `POST /checks`, 10% `GET /devices/laptops/{id}`, 10% `GET /devices/accessories/{id}`, 5% `GET /ready`, 5% `POST /result-reports`) against seeded PostgreSQL. In local load validation, the mix measured p50 of 23.8 ms, p95 of 50.5 ms, p99 of 92.9 ms, throughput of 5.01 req/s, and 0.00% error rate. Natural language parsing (`POST /setup-requests/parse`) is backed by an external AI provider and is tracked and evaluated separately from this deterministic SLO.
@@ -241,9 +260,20 @@ We welcome contributions! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for l
 ## Project structure
 
 ```text
-api/     FastAPI service, SQLAlchemy models, Alembic migrations, and device seeds
-web/     Next.js user interface
-.github/ GitHub Actions checks
+api/
+  app/            FastAPI service, models, rules engine (0.6.0), and observability
+  specs/          Declarative JSON device specs (laptops/ and accessories/)
+  migrations/     Alembic database schema migrations
+  tests/          Pytest test suite (163 passing unit and integration tests)
+  scripts/        Spec validation, evaluation benchmarks, and staleness audits
+web/
+  src/
+    components/   Modular UI components (DeviceSelector, SetupForm, ResultPanel, etc.)
+    types/        Canonical TypeScript checker contracts
+    utils/        Evidence grouping and helper utilities
+    app/          Next.js App Router (root checker and /coverage)
+  e2e/            Playwright browser test suite
+.github/          GitHub Actions CI and release confidence workflows
 ```
 
 ## Scope and limitations

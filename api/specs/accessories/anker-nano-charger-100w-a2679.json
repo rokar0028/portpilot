@@ -1,0 +1,34 @@
+{
+  "id": "anker-nano-charger-100w-a2679",
+  "brand": "Anker",
+  "name": "Anker Nano 100W USB-C Charger",
+  "model_code": "A2679",
+  "category": "usb_c_charger",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": null,
+  "hdmi_port_count": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": 100,
+  "usb_a_port_count": null,
+  "ethernet_max_gbps": null,
+  "review_status": "verified",
+  "source_title": "Anker Nano 100W USB-C Charger",
+  "source_url": "https://www.anker.com/products/b2679-nano-100w-usb-c-charger",
+  "excerpt": "Official Anker product specifications for A2679.",
+  "evidence_excerpts": {
+    "model_code": "Anker product identifies the charger as model A2679.",
+    "category": "Anker describes the product as a USB-C charger.",
+    "host_connection": "The charger provides power through USB-C.",
+    "usb_c_output_max_w": "Maximum USB-C output is 100W."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "usb_c_output_max_w"
+  ],
+  "kind": "accessory"
+}

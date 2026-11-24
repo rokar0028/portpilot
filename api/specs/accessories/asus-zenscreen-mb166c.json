@@ -1,0 +1,43 @@
+{
+  "id": "asus-zenscreen-mb166c",
+  "brand": "ASUS",
+  "name": "ASUS ZenScreen MB166C Portable Monitor",
+  "model_code": "MB166C",
+  "region_variant": null,
+  "hardware_revision": null,
+  "category": "portable_monitor",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": true,
+  "hdmi_port_count": 0,
+  "hdmi_max_resolution": "1920x1080",
+  "hdmi_max_refresh_hz": 60,
+  "pd_input_max_w": null,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": null,
+  "ethernet_max_gbps": null,
+  "display_configurations": null,
+  "review_status": "verified",
+  "source_title": "ASUS ZenScreen MB166C Portable USB Monitor Tech Specs",
+  "source_url": "https://www.asus.com/displays-desktops/monitors/zenscreen/zenscreen-mb166c/techspec/",
+  "excerpt": "ASUS ZenScreen MB166C Portable USB Monitor - 15.6 inch, Full HD (1920x1080), IPS, USB Type-C. Signal Frequency: 60Hz. Input: USB Type-C DisplayPort Alt Mode. Host system requires DisplayPort Alt Mode over USB-C.",
+  "evidence_excerpts": {
+    "model_code": "Model: ZenScreen MB166C.",
+    "category": "ASUS categorizes the product as a Portable USB Monitor.",
+    "host_connection": "Connects via USB Type-C port.",
+    "requires_usb_c_dp_alt_mode": "Video transmission requires host device to support DisplayPort Alt Mode over USB-C.",
+    "hdmi_port_count": "0 HDMI ports; utilizes USB-C DisplayPort Alt Mode video input.",
+    "hdmi_max_resolution": "Full HD native panel resolution: 1920 x 1080 pixels.",
+    "hdmi_max_refresh_hz": "Signal Frequency / Max Refresh Rate: 60Hz."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "requires_usb_c_dp_alt_mode",
+    "hdmi_port_count",
+    "hdmi_max_resolution",
+    "hdmi_max_refresh_hz"
+  ],
+  "kind": "accessory"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "lenovo-83da009cax",
+  "brand": "Lenovo",
+  "name": "IdeaPad Slim 5 14IMH9",
+  "model_code": "83DA009CAX",
+  "region_variant": null,
+  "operating_system": null,
+  "usb_c_port_count": 2,
+  "usb_c_data_rate_gbps": null,
+  "usb_c_video_supported": true,
+  "usb_c_dp_version": "1.4",
+  "usb_c_pd_input_min_w": null,
+  "usb_c_pd_input_max_w": null,
+  "hdmi_version": null,
+  "hdmi_max_resolution": null,
+  "hdmi_max_refresh_hz": null,
+  "maximum_external_displays": null,
+  "usb_c_max_resolution": null,
+  "usb_c_max_refresh_hz": null,
+  "review_status": "verified",
+  "source_title": "Lenovo PSREF: IdeaPad Slim 5 14IMH9 (83DA009CAX)",
+  "source_url": "https://psref.lenovo.com/Detail/IdeaPad_Slim_5_14IMH9?M=83DA009CAX",
+  "excerpt": "2x USB-C ports with USB PD 3.0 and DisplayPort 1.4.",
+  "evidence_excerpts": {
+    "model_code": "Lenovo PSREF identifies this configuration as model 83DA009CAX.",
+    "usb_c_port_count": "2x USB-C ports with USB PD 3.0 and DisplayPort 1.4.",
+    "usb_c_video_supported": "2x USB-C ports with USB PD 3.0 and DisplayPort 1.4.",
+    "usb_c_dp_version": "Minimum specified DisplayPort version across the model's USB-C ports: DP 1.4."
+  },
+  "evidence": [
+    "model_code",
+    "usb_c_port_count",
+    "usb_c_video_supported",
+    "usb_c_dp_version"
+  ],
+  "kind": "laptop"
+}

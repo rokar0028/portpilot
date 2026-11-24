@@ -3,7 +3,7 @@ from typing import Any
 
 from .schemas import CheckRequest
 
-RULE_ENGINE_VERSION = "0.5.0"
+RULE_ENGINE_VERSION = "0.6.0"
 
 
 def _normalize_resolution(value: str) -> str:
@@ -598,6 +598,13 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                     "DisplayLink handles multiple displays via host software compression over USB data "
                     "without DisplayPort lane allocation constraints.",
                 )
+            elif is_thunderbolt and (laptop_display_limit is None or requested_count <= laptop_display_limit):
+                add(
+                    "Combined display mode",
+                    "passed",
+                    f"Thunderbolt / USB4 architecture provides dedicated multi-stream bandwidth "
+                    f"for up to {laptop_display_limit or requested_count} independent displays.",
+                )
             else:
                 add(
                     "Combined display mode",
@@ -653,26 +660,62 @@ def evaluate(request: CheckRequest, laptop: dict[str, Any], accessory: dict[str,
                 "documented charging input range.",
             )
 
-    if failed:
-        verdict = "incompatible"
-        summary = (
-            "At least one required capability is documented as unsupported or below the requested setup."
-        )
-    elif unknown:
-        verdict = "insufficient_data"
-        summary = (
-            "Some required capabilities are not established by manufacturer "
-            "specifications, so PortPilot will not guess."
-        )
-    elif limits:
-        verdict = "compatible_with_limits"
-        summary = "The requested setup is supported, with the documented limitation(s) listed below."
+    is_theoretical = (
+        laptop.get("brand") == "Standard Protocol"
+        or accessory.get("brand") == "Standard Protocol"
+        or str(laptop.get("id", "")).startswith("protocol-")
+        or str(accessory.get("id", "")).startswith("protocol-")
+        or getattr(request, "evaluation_tier", None) == "theoretical"
+    )
+    evaluation_tier = "theoretical" if is_theoretical else "verified"
+
+    if is_theoretical:
+        if failed:
+            verdict = "incompatible"
+            summary = (
+                "The requested setup exceeds the bandwidth, power, or topology limits "
+                "of the selected standard protocol specifications."
+            )
+        elif unknown:
+            verdict = "insufficient_data"
+            summary = (
+                "Certain setup requirements are outside the baseline capabilities "
+                "defined for this protocol profile."
+            )
+        elif limits:
+            verdict = "compatible_with_limits"
+            summary = (
+                "The requested setup is theoretically supported under standard "
+                "protocol specifications, with documented limitations."
+            )
+        else:
+            verdict = "compatible"
+            summary = (
+                "The requested setup is theoretically supported under standard "
+                "hardware protocol specifications."
+            )
     else:
-        verdict = "compatible"
-        summary = "The requested setup is supported by the available specifications."
+        if failed:
+            verdict = "incompatible"
+            summary = (
+                "At least one required capability is documented as unsupported or below the requested setup."
+            )
+        elif unknown:
+            verdict = "insufficient_data"
+            summary = (
+                "Some required capabilities are not established by manufacturer "
+                "specifications, so PortPilot will not guess."
+            )
+        elif limits:
+            verdict = "compatible_with_limits"
+            summary = "The requested setup is supported, with the documented limitation(s) listed below."
+        else:
+            verdict = "compatible"
+            summary = "The requested setup is supported by the available specifications."
 
     return {
         "verdict": verdict,
+        "evaluation_tier": evaluation_tier,
         "summary": summary,
         "limits": limits,
         "requirements": checks,

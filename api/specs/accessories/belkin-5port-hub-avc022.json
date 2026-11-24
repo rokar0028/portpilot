@@ -1,0 +1,42 @@
+{
+  "id": "belkin-5port-hub-avc022",
+  "brand": "Belkin",
+  "name": "Belkin 5-Port USB-C Hub with 4K HDMI",
+  "model_code": "AVC022",
+  "category": "usb_c_hub",
+  "host_connection": "USB-C",
+  "requires_usb_c_dp_alt_mode": true,
+  "hdmi_port_count": 1,
+  "hdmi_max_resolution": "4K",
+  "hdmi_max_refresh_hz": 60,
+  "pd_input_max_w": 100,
+  "pd_pass_through_max_w": null,
+  "usb_c_output_max_w": null,
+  "usb_a_port_count": null,
+  "ethernet_max_gbps": null,
+  "review_status": "verified",
+  "source_title": "Belkin AVC022 Support",
+  "source_url": "https://www.belkin.com/uk/support-article/?articleNum=337549",
+  "excerpt": "Official Belkin product specifications for AVC022.",
+  "evidence_excerpts": {
+    "model_code": "Belkin identifies this hub as model AVC022.",
+    "category": "Belkin describes the product as a USB-C hub.",
+    "host_connection": "The hub connects through USB-C.",
+    "requires_usb_c_dp_alt_mode": "The laptop USB-C port must support DisplayPort Alt Mode.",
+    "hdmi_port_count": "1 HDMI port.",
+    "hdmi_max_resolution": "HDMI supports up to 4K resolution.",
+    "hdmi_max_refresh_hz": "HDMI supports up to 60Hz.",
+    "pd_input_max_w": "USB-C power pass-through supports up to 100W."
+  },
+  "evidence": [
+    "model_code",
+    "category",
+    "host_connection",
+    "requires_usb_c_dp_alt_mode",
+    "hdmi_port_count",
+    "hdmi_max_resolution",
+    "hdmi_max_refresh_hz",
+    "pd_input_max_w"
+  ],
+  "kind": "accessory"
+}

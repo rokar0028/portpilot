@@ -1,8 +1,10 @@
 import logging
 import os
 import re
+from collections import deque
 from datetime import UTC, datetime
-from time import perf_counter
+from threading import Lock
+from time import monotonic, perf_counter
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -75,6 +77,38 @@ app.include_router(catalog_admin_router)
 
 
 SLOW_REQUEST_THRESHOLD_MS = float(os.getenv("SLOW_REQUEST_THRESHOLD_MS", "500"))
+REPORT_RATE_LIMIT_MAX = max(1, int(os.getenv("REPORT_RATE_LIMIT_MAX", "10")))
+REPORT_RATE_LIMIT_WINDOW_SECONDS = max(1.0, float(os.getenv("REPORT_RATE_LIMIT_WINDOW_SECONDS", "60")))
+_report_rate_limit: dict[str, deque[float]] = {}
+_report_rate_limit_lock = Lock()
+
+
+def enforce_report_rate_limit(request: Request) -> None:
+    """Apply a small process-local abuse limit to the unauthenticated report endpoint."""
+    client_key = request.client.host if request.client else "unknown"
+    now = monotonic()
+    cutoff = now - REPORT_RATE_LIMIT_WINDOW_SECONDS
+    with _report_rate_limit_lock:
+        attempts = _report_rate_limit.setdefault(client_key, deque())
+        while attempts and attempts[0] <= cutoff:
+            attempts.popleft()
+        if len(attempts) >= REPORT_RATE_LIMIT_MAX:
+            retry_after = max(1, int(attempts[0] + REPORT_RATE_LIMIT_WINDOW_SECONDS - now))
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "code": "report_rate_limited",
+                    "message": "Too many reports submitted. Try again later.",
+                },
+                headers={"Retry-After": str(retry_after)},
+            )
+        attempts.append(now)
+        if len(_report_rate_limit) > 10_000:
+            expired = [
+                key for key, values in _report_rate_limit.items() if not values or values[-1] <= cutoff
+            ]
+            for key in expired:
+                _report_rate_limit.pop(key, None)
 
 
 @app.middleware("http")
@@ -167,6 +201,8 @@ def laptop_rule_record(record: LaptopModel) -> dict:
     ports = {target: getattr(record, source) for target, source in rule_fields("laptop", "ports").items()}
     ports["usb_c_video"] = f"DisplayPort {record.usb_c_dp_version}" if record.usb_c_dp_version else None
     return {
+        "id": record.id,
+        "brand": record.brand,
         "operating_system": record.operating_system,
         "ports": ports,
         "evidence": [],
@@ -183,6 +219,8 @@ def accessory_rule_record(record: AccessoryModel) -> dict:
     for target, source in derived_rule_fields("accessory", "outputs", record.category).items():
         outputs[target] = getattr(record, source)
     return {
+        "id": record.id,
+        "brand": record.brand,
         "category": record.category,
         "host_connection": record.host_connection,
         "pd_input_max_w": record.pd_input_max_w,
@@ -415,6 +453,7 @@ def laptop_compatible_accessories(
             CompatibleAccessoryItem(
                 accessory=accessory_read(acc),
                 verdict=verdict_val,
+                evaluation_tier=check_result.get("evaluation_tier", "verified"),
                 summary=check_result["summary"],
                 limits=check_result["limits"],
                 requirements=check_result["requirements"],
@@ -495,22 +534,25 @@ def check_compatibility(
 
 @app.post("/result-reports", response_model=ResultReportRead, status_code=201)
 def create_result_report(
-    request: ResultReportWrite,
+    payload: ResultReportWrite,
     session: Session = Depends(get_session),
+    http_request: Request = None,  # type: ignore[assignment]
 ) -> ResultReportRead:
+    if http_request is not None:
+        enforce_report_rate_limit(http_request)
     report = ResultReport(
         id=f"report-{uuid4().hex}",
-        laptop_id=request.laptop_id,
-        accessory_id=request.accessory_id,
-        setup=request.setup.model_dump(mode="json"),
-        verdict=request.verdict,
-        rule_engine_version=request.rule_engine_version,
-        note=request.note,
+        laptop_id=payload.laptop_id,
+        accessory_id=payload.accessory_id,
+        setup=payload.setup.model_dump(mode="json"),
+        verdict=payload.verdict,
+        rule_engine_version=payload.rule_engine_version,
+        note=payload.note,
         created_at=datetime.now(UTC),
     )
     session.add(report)
     session.commit()
-    log_event("result_report_received", verdict=request.verdict)
+    log_event("result_report_received", verdict=payload.verdict)
     return ResultReportRead(id=report.id)
 
 
@@ -543,6 +585,7 @@ def create_result_snapshot(
         accessory_id=snapshot.accessory_id,
         setup=request.setup,
         verdict=snapshot.verdict,
+        evaluation_tier=request.evaluation_tier,
         summary=snapshot.summary,
         limits=snapshot.limits,
         requirements=snapshot.requirements,
@@ -563,12 +606,18 @@ def get_result_snapshot(
             status_code=404,
             detail={"code": "snapshot_not_found", "message": "Result snapshot not found."},
         )
+    tier = (
+        "theoretical"
+        if snapshot.laptop_id.startswith("protocol-") or snapshot.accessory_id.startswith("protocol-")
+        else "verified"
+    )
     return ResultSnapshotRead(
         id=snapshot.id,
         laptop_id=snapshot.laptop_id,
         accessory_id=snapshot.accessory_id,
         setup=SetupRequest.model_validate(snapshot.setup),
         verdict=snapshot.verdict,
+        evaluation_tier=tier,
         summary=snapshot.summary,
         limits=snapshot.limits,
         requirements=snapshot.requirements,
