@@ -8,8 +8,8 @@
 [![Accessibility](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-brightgreen.svg)](https://www.w3.org/WAI/standards-guidelines/wcag/)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **Academic Final Year Major Project**  
-> **Core Focus:** Deterministic Hardware Protocol Modeling, Formal Compatibility Verification, Evidence-Linked Distributed Catalogs & Accessible Web Engineering.
+> 🎓 **Academic Capstone Project**  
+> This project was designed and developed as an **Academic Final Year Major Project** for the Bachelor of Technology (B.Tech) degree in Computer Science & Engineering. It addresses real-world hardware protocol verification, physical bus constraints modeling, evidence-backed knowledge systems, and accessible engineering.
 
 ---
 
@@ -31,40 +31,14 @@ PortPilot operates on an auditable two-tier evaluation model that guarantees mat
 - **Tier 1: Verified Manufacturer Evidence (🛡️ Verified):** Exact hardware model matching where every capability is backed by an active manufacturer specification URL citation, verbatim excerpt, and checked date. Missing required fields produce **Insufficient data**.
 - **Tier 2: Theoretical Protocol Evaluation (⚙️ Theoretical):** Standard hardware protocol profiles (such as *Thunderbolt 4 Host*, *USB-C 3.2 Gen 2 DP 1.4 Host*, *Apple Silicon Base Architecture*, *Universal Thunderbolt 4 Dock*, and *Dual HDMI MST Dock*). This allows users whose exact laptop or accessory is not yet curated to evaluate their setup against official USB-IF, VESA, and Intel protocol standards.
 
-## Current vertical slice
+## Core Capabilities & Features
 
-- Laptop: Lenovo IdeaPad Slim 3 14IRH10R
-- Accessory: Anker Nano Hub (7-in-1, A83D2)
-- Setup: one 1080p external display plus laptop charging
-
-The manufacturer sources confirm USB-C DisplayPort 1.2 and USB Power Delivery (45–65 W) on the laptop, and HDMI plus 85 W pass-through on the hub, confirming compatibility for this setup. The API catalogue is database-backed and currently publishes 22 laptops and 24 accessories (including verified vendor hardware and standard protocol profiles); three accessories are held for model-identity and evidence review. Missing required specifications or unverified claims produce **Insufficient data** rather than guessing.
-
-The checker lets you select a laptop, accessory, display mode, and charging requirement. After a check, **Share this result** copies a URL containing an immutable result snapshot (`?snapshot=<id>`) that preserves the verified verdict, summary, limitations, and citations, while also providing a fallback rerun mode when opened. Quick-filter search boxes let you quickly narrow down laptops and accessories by model name or code. A quick-reference glossary on the page explains USB-C, DisplayPort Alt Mode, USB Power Delivery, USB4, and Thunderbolt. Users can report a questionable result with its selected models, requested setup, verdict, rules version, and an optional note. Reports omit contact details and device/browser identifiers.
-
-The [coverage and limitations page](/coverage) reports live verified catalogue counts and explains how PortPilot handles manufacturer evidence and unknown specifications.
-
-## Implementation plans
-
-- [PortPilot implementation plan](docs/portpilot-implementation-plan.md) — product scope and original implementation direction.
-- [V2 implementation plan](docs/v2-implementation-plan.md) — follow-on workstreams and V2 release acceptance criteria.
-- [Workstream 0 implementation plan](docs/v2-workstream-0-implementation-plan.md) — V2 baseline inventory, capability registry, and implementation control.
-- [Workstream 1 implementation plan](docs/v2-workstream-1-implementation-plan.md) — device identity, duplicate review, and evidence threshold.
-- [Workstream 2 implementation plan](docs/v2-workstream-2-implementation-plan.md) — evidence conflicts, rechecks, and correction history.
-- [Workstream 3 implementation plan](docs/v2-workstream-3-implementation-plan.md) — capability registry integration and consistency checks.
-- [Workstream 4 implementation plan](docs/v2-workstream-4-implementation-plan.md) — simultaneous display configurations, modes, and topology.
-- [Workstream 5 implementation plan](docs/v2-workstream-5-implementation-plan.md) — model-finding help, mobile readability, low-data reporting, and sharing behavior.
-- [Workstream 6 implementation plan](docs/v2-workstream-6-implementation-plan.md) — screen-reader manual audit plan and accessibility checks.
-- [Workstream 7 implementation plan](docs/v2-workstream-7-implementation-plan.md) — latency target, duration distributions, and migration recovery.
-- [Workstream 8 implementation plan](docs/v2-workstream-8-implementation-plan.md) — live-provider parser evaluation, versioned benchmarks, and accuracy reporting.
-- [Workstream 9 implementation plan](docs/v2-workstream-9-implementation-plan.md) — preview deployment verification and release checklist.
-- [Workstream 10 implementation plan](docs/v2-workstream-10-implementation-plan.md) — contributor guide, playbooks, and hand-off.
-- [Workstream 11 implementation plan](docs/v2-workstream-11-implementation-plan.md) — hardware protocol fidelity, physical bus constraints, and catalogue depth.
-- [Capability registry contributor guide](docs/capability-registry.md) — how to add a capability across catalogue, evidence, publication, and rules.
-- [V2 migration and rollout notes](docs/v2-migration-rollout.md) — revision history, data impact, rollout, and rollback guidance.
-- [Database operations and migration recovery runbook](docs/database-operations-runbook.md) — tested backup, restore, and failure recovery instructions for SQLite, Compose PostgreSQL, and hosted preview.
-- [Source-review playbook](docs/source-review-playbook.md) — review, recheck, and correction process.
-- [Catalogue identity and evidence standard](docs/catalogue-identity-and-evidence.md) — contributor guidance for exact device identity and publication.
-- [Phase 0 implementation plan](docs/implementation%20plan.md) — initial scope and vertical-slice decisions.
+- **Multi-Device Compatibility Checking:** Evaluate combinations across 22 verified laptops and 24 accessories spanning Apple, Dell, Lenovo, Anker, Belkin, Ugreen, and Plugable, alongside standard protocol profiles.
+- **Auditable Evidence Citations:** Every compatibility assertion links directly to an active manufacturer specification URL, verbatim quote, and verification timestamp.
+- **Immutable Result Snapshots:** Share checks via persistent URL snapshots (`?snapshot=<id>`) preserving the exact verdict, requirements, limitations, and citations.
+- **Reverse Accessory Search:** Lookup all compatible docks and chargers for a given laptop via `GET /devices/laptops/{device_id}/compatible-accessories`.
+- **WCAG 2.1 AA Accessibility:** Full screen-reader support with polite ARIA live announcements, high-contrast UI, keyboard navigation, and zero automated axe violations.
+- **Natural Language Parsing:** LLM-assisted setup parser (`POST /setup-requests/parse`) that converts freeform queries (e.g., *"dual 4K displays and 65W charging"*) into structured schema with fallback rules.
 
 ## Prerequisites
 
@@ -291,15 +265,37 @@ flowchart TD
 
 See [the 90-second demo outline](docs/demo-outline.md) for candidate compatible and incompatible checks, the result details to show, and the recording sequence.
 
-## Contributing
+## Documentation & Methodology
 
-We welcome contributions! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for local environment setup, contribution tracks (catalogue curation, capability extension, rules engine, frontend), quality commands, and pull request guidelines. Key contributor references:
-- [Catalogue Identity and Evidence Standard](docs/catalogue-identity-and-evidence.md)
+Key engineering specifications and operational runbooks are maintained in [`docs/`](docs/):
+
+- [PortPilot Architecture & Core Plan](docs/portpilot-implementation-plan.md) — Product requirements and foundational protocol rules.
+- [V2 Capability & Evaluation Architecture](docs/v2-implementation-plan.md) — Follow-on capabilities, snapshots, and release acceptance criteria.
+- [Capability Registry Guide](docs/capability-registry.md) — How capabilities are registered, verified, and mapped to deterministic rules.
+- [Database Operations & Recovery Runbook](docs/database-operations-runbook.md) — Tested backup, migration recovery, and failure response procedures.
+- [Accessibility Screen-Reader Test Plan](docs/accessibility-screen-reader-test-plan.md) — WCAG 2.1 AA manual and automated test matrices.
+
+<details>
+<summary><strong>View All 20 Detailed Workstream Plans & Historical Specs</strong></summary>
+
+- [Workstream 0: Baseline Inventory & Capability Registry](docs/v2-workstream-0-implementation-plan.md)
+- [Workstream 1: Device Identity & Evidence Threshold](docs/v2-workstream-1-implementation-plan.md)
+- [Workstream 2: Evidence Conflicts & Recheck History](docs/v2-workstream-2-implementation-plan.md)
+- [Workstream 3: Registry Integration & Consistency Checks](docs/v2-workstream-3-implementation-plan.md)
+- [Workstream 4: Display Configurations & Topology](docs/v2-workstream-4-implementation-plan.md)
+- [Workstream 5: Model-Finding, Mobile UX & Low-Data Reports](docs/v2-workstream-5-implementation-plan.md)
+- [Workstream 6: Screen-Reader & Accessibility Audit](docs/v2-workstream-6-implementation-plan.md)
+- [Workstream 7: Latency SLO, Metrics & Migration Recovery](docs/v2-workstream-7-implementation-plan.md)
+- [Workstream 8: LLM Setup Parser Evaluation Benchmark](docs/v2-workstream-8-implementation-plan.md)
+- [Workstream 9: Deployment Verification Checklist](docs/v2-workstream-9-implementation-plan.md)
+- [Workstream 10: Contributor Hand-off & Architecture Runbooks](docs/v2-workstream-10-implementation-plan.md)
+- [Workstream 11: Hardware Protocol Fidelity & Bus Constraints](docs/v2-workstream-11-implementation-plan.md)
+- [Workstream 12: Reverse Lookup & Declarative Seeder](docs/v2-workstream-12-implementation-plan.md)
 - [Source Review Playbook](docs/source-review-playbook.md)
-- [Capability Registry Contributor Guide](docs/capability-registry.md)
-- [Database Operations and Migration Recovery Runbook](docs/database-operations-runbook.md)
-- [Preview and Release Playbook](docs/preview-and-release-playbook.md)
-- [Accessibility Screen-Reader Test Plan](docs/accessibility-screen-reader-test-plan.md)
+- [Catalogue Identity Standard](docs/catalogue-identity-and-evidence.md)
+- [Preview & Release Playbook](docs/preview-and-release-playbook.md)
+- [Phase 0 Original Plan](docs/implementation%20plan.md)
+</details>
 
 ## Project structure
 
@@ -336,9 +332,8 @@ web/
 
 ## Academic Project Attribution
 
-- **Project:** PortPilot — Deterministic Hardware Protocol & Peripheral Compatibility Verification Engine
-- **Academic Context:** Final Year Major Project / Capstone Project (B.Tech / Bachelor of Technology)
-- **Author / Developer:** Kartik Agrawal ([@rokar0028](https://github.com/rokar0028))
+- **Project Title:** PortPilot — Deterministic Hardware Protocol & Peripheral Compatibility Verification Engine
+- **Academic Context:** Final Year Major Project / Capstone Project (B.Tech in Computer Science & Engineering)
 - **Technologies:** Python 3.12, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Next.js 15, TypeScript 5.7, Playwright, Docker, Prometheus
 - **Repository:** [github.com/rokar0028/portpilot](https://github.com/rokar0028/portpilot)
 - **License:** [MIT License](LICENSE)
