@@ -137,9 +137,9 @@ export function ResultPanel({
                   fontWeight: 600,
                   letterSpacing: "0.04em",
                   borderRadius: "4px",
-                  background: "rgba(168, 85, 247, 0.15)",
-                  color: "#c084fc",
-                  border: "1px solid rgba(168, 85, 247, 0.3)",
+                  background: "rgba(147, 51, 234, 0.12)",
+                  color: "#6b21a8",
+                  border: "1px solid rgba(147, 51, 234, 0.25)",
                 }}
               >
                 <span aria-hidden="true">⚙</span> THEORETICAL PROTOCOL
@@ -157,9 +157,9 @@ export function ResultPanel({
                   fontWeight: 600,
                   letterSpacing: "0.04em",
                   borderRadius: "4px",
-                  background: "rgba(34, 197, 94, 0.12)",
-                  color: "#4ade80",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
+                  background: "rgba(22, 101, 52, 0.1)",
+                  color: "#166534",
+                  border: "1px solid rgba(22, 101, 52, 0.25)",
                 }}
               >
                 <span aria-hidden="true">🛡</span> VERIFIED MANUFACTURER EVIDENCE
