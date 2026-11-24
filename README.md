@@ -8,11 +8,6 @@
 [![Accessibility](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-brightgreen.svg)](https://www.w3.org/WAI/standards-guidelines/wcag/)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> 🎓 **Academic Capstone Project**  
-> This project was designed and developed as an **Academic Final Year Major Project** for the Bachelor of Technology (B.Tech) degree in Computer Science & Engineering. It addresses real-world hardware protocol verification, physical bus constraints modeling, evidence-backed knowledge systems, and accessible engineering.
-
----
-
 PortPilot is a deterministic compatibility and protocol verification engine that assesses whether a given laptop host and peripheral accessory (hubs, docks, chargers, displays) reliably support a requested hardware setup. Unlike heuristic tools or retail product descriptions, PortPilot calculates verdicts through deterministic mathematical and protocol rules based strictly on verified manufacturer specifications and physical bus standards. Missing required facts produce **Insufficient data** rather than speculative assertions.
 
 ## Problem Statement: Real-World Hardware Traps Solved
