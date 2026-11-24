@@ -8,7 +8,11 @@ import type {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  fallbackMessage = "The PortPilot service could not complete this request.",
+): Promise<T> {
   const response = await fetch(`${API}${path}`, init);
   const data = (await response.json().catch(() => null)) as
     | (T & {
@@ -16,10 +20,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       })
     | null;
   if (!response.ok) {
-    throw new Error(
-      data?.detail?.message ??
-        "The PortPilot service could not complete this request.",
-    );
+    throw new Error(data?.detail?.message ?? fallbackMessage);
   }
   return data as T;
 }
@@ -33,15 +34,19 @@ export function runCompatibilityCheck(
   accessoryId: string,
   setup: Setup,
 ): Promise<Result> {
-  return request<Result>("/checks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      laptop_id: laptopId,
-      accessory_id: accessoryId,
-      setup,
-    }),
-  });
+  return request<Result>(
+    "/checks",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        laptop_id: laptopId,
+        accessory_id: accessoryId,
+        setup,
+      }),
+    },
+    "The compatibility service could not complete this check.",
+  );
 }
 
 export function parseSetupDescription(

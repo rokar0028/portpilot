@@ -22,6 +22,7 @@ htmlcov/
 node_modules/
 web/node_modules/
 web/.next/
+web/.next-*/
 web/.next-e2e/
 .next-backup-*/
 web/out/

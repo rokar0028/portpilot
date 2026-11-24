@@ -1,16 +1,34 @@
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from app.database import SessionLocal
+import app.database as database
+import app.seed as seed_module
+from app.database import Base
 from app.main import app
 from app.rules import evaluate
 from app.schemas import CheckRequest, SetupRequest
-from app.seed import ACCESSORIES, LAPTOPS, seed
+from app.seed import ACCESSORIES, LAPTOPS
+
+
+@pytest.fixture(autouse=True)
+def initialize_test_catalogue(tmp_path, monkeypatch):
+    """Initialize an isolated SQLite schema and seed its catalogue for each test."""
+    test_engine = create_engine(
+        f"sqlite:///{tmp_path / 'catalogue.db'}",
+        connect_args={"check_same_thread": False},
+    )
+    test_sessions = sessionmaker(bind=test_engine, autoflush=False, expire_on_commit=False)
+    monkeypatch.setattr(database, "SessionLocal", test_sessions)
+    monkeypatch.setattr(seed_module, "SessionLocal", test_sessions)
+    Base.metadata.create_all(bind=test_engine)
+    seed_module.seed()
+    yield
+    test_engine.dispose()
 
 
 def test_verified_device_returns_verified_tier():
-    with SessionLocal():
-        seed()
-
     client = TestClient(app)
     response = client.post(
         "/checks",
@@ -33,9 +51,6 @@ def test_verified_device_returns_verified_tier():
 
 
 def test_standard_protocol_profiles_return_theoretical_tier():
-    with SessionLocal():
-        seed()
-
     client = TestClient(app)
     response = client.post(
         "/checks",
@@ -58,9 +73,6 @@ def test_standard_protocol_profiles_return_theoretical_tier():
 
 
 def test_standard_protocol_macos_mst_evaluates_with_constraints():
-    with SessionLocal():
-        seed()
-
     client = TestClient(app)
     response = client.post(
         "/checks",
