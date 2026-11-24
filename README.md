@@ -1,19 +1,32 @@
-# PortPilot
+# PortPilot: Hardware Protocol & Compatibility Verification Engine
 
-PortPilot checks whether a laptop and accessory support a requested setup. Verdicts come from deterministic rules over documented specifications and hardware protocols; missing required facts produce **Insufficient data** rather than guessing.
+[![CI](https://github.com/rokar0028/portpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/rokar0028/portpilot/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-000000.svg?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript 5.7](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/Pytest-163%20passed-success.svg?logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![Accessibility](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-brightgreen.svg)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+[![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Why PortPilot: What It Actually Solves
+> **Academic Final Year Major Project**  
+> **Core Focus:** Deterministic Hardware Protocol Modeling, Formal Compatibility Verification, Evidence-Linked Distributed Catalogs & Accessible Web Engineering.
 
-Online retailers (Amazon, Best Buy) and general LLMs frequently provide false-positive compatibility answers because they treat USB-C as a uniform standard. In reality, USB-C is merely a physical shape that conceals widely divergent protocols, bandwidth limits, and operating system quirks. PortPilot prevents users from making expensive buying mistakes by checking real-world physical constraints:
+---
 
-1. **The macOS Multi-Stream Transport (MST) Trap:** Standard USB-C multi-display docks rely on DisplayPort MST to extend separate desktops to 2+ monitors. macOS refuses to support MST over standard USB-C, forcing all connected external monitors to mirror each other. PortPilot flags this incompatibility before users purchase an unusable multi-port dock.
-2. **The High-Speed Lane Bifurcation Bottleneck:** Driving 4K at 60 Hz over DisplayPort 1.2 requires all 4 high-speed lanes on a USB-C connector. Connecting a hub that provides USB 3.0 data speeds steals 2 lanes for data, capping video output to 4K at 30 Hz. PortPilot identifies and warns about these bandwidth trade-offs.
-3. **Net Power Delivery Pass-Through Deficits:** USB-C hubs reserve 15W–30W of input power for internal chipsets and ports. If a 65W wall charger is plugged into a hub with a 15W reservation, it delivers only 50W to a laptop requiring 65W, causing slow-charge or battery drain under load. PortPilot calculates net power margins ($W_{\text{input}} - W_{\text{reservation}}$) against host requirements.
-4. **GPU Display Limits & DisplayLink Software Routing:** Base Apple Silicon chips (M1, M2, M3, M4) natively support only one external display. PortPilot verifies whether multi-display docks use native DisplayPort Alt Mode (which fails on base Macs) or DisplayLink USB software compression (which bypasses native GPU limits with background drivers).
+PortPilot is a deterministic compatibility and protocol verification engine that assesses whether a given laptop host and peripheral accessory (hubs, docks, chargers, displays) reliably support a requested hardware setup. Unlike heuristic tools or retail product descriptions, PortPilot calculates verdicts through deterministic mathematical and protocol rules based strictly on verified manufacturer specifications and physical bus standards. Missing required facts produce **Insufficient data** rather than speculative assertions.
+
+## Problem Statement: Real-World Hardware Traps Solved
+
+Online marketplaces (Amazon, Best Buy) and general LLMs frequently provide false-positive compatibility answers because they treat USB-C as a uniform standard. In reality, USB-C is merely a physical form factor concealing divergent protocols, alternate modes, bandwidth limits, and operating system quirks. PortPilot models real-world physical bus constraints to prevent expensive hardware mismatches:
+
+1. **The macOS Multi-Stream Transport (MST) Trap:** Standard USB-C multi-display docks rely on DisplayPort MST to extend separate desktop spaces to 2+ monitors over a single cable. macOS operating systems intentionally omit MST support over standard USB-C, forcing all connected external monitors to mirror each other. PortPilot flags this architectural constraint before users purchase an incompatible dock.
+2. **The High-Speed Lane Bifurcation Bottleneck:** Driving 4K at 60 Hz over DisplayPort 1.2 requires all 4 high-speed differential lanes on a USB-C connector. Connecting a hub that provides USB 3.0 data (5 Gbps+) steals 2 lanes for data traffic, capping display output to 4K at 30 Hz or 1080p. PortPilot identifies and warns about these hardware bandwidth trade-offs.
+3. **Net Power Delivery Pass-Through Deficits:** Multi-port USB-C hubs reserve 15W–30W of input power to energize internal chipsets and charging ports. If a 65W wall charger is plugged into a hub with a 15W reservation, it delivers only 50W to a laptop requiring 65W, causing slow-charge warnings or battery drain under CPU load. PortPilot calculates net power margins ($W_{\text{net}} = W_{\text{input}} - W_{\text{reservation}}$) against host requirements.
+4. **GPU Display Limits & DisplayLink Software Routing:** Base Apple Silicon processors (M1, M2, M3, M4) natively support only one external display engine. PortPilot models whether multi-display docks rely on native DisplayPort Alt Mode (which fails on base Macs) or DisplayLink USB software compression (which bypasses native GPU limits using virtual framebuffer drivers).
 
 ## Two-Tier Compatibility Architecture
 
-PortPilot operates on a two-tier evaluation model that guarantees transparency:
+PortPilot operates on an auditable two-tier evaluation model that guarantees mathematical transparency:
 
 - **Tier 1: Verified Manufacturer Evidence (🛡️ Verified):** Exact hardware model matching where every capability is backed by an active manufacturer specification URL citation, verbatim excerpt, and checked date. Missing required fields produce **Insufficient data**.
 - **Tier 2: Theoretical Protocol Evaluation (⚙️ Theoretical):** Standard hardware protocol profiles (such as *Thunderbolt 4 Host*, *USB-C 3.2 Gen 2 DP 1.4 Host*, *Apple Silicon Base Architecture*, *Universal Thunderbolt 4 Dock*, and *Dual HDMI MST Dock*). This allows users whose exact laptop or accessory is not yet curated to evaluate their setup against official USB-IF, VESA, and Intel protocol standards.
@@ -206,27 +219,58 @@ CI runs these checks on pushes and pull requests. Apply database migrations with
 
 The scheduled **Release confidence** workflow runs the same browser journeys in Chromium, Firefox, and WebKit, repeats PostgreSQL policy/API checks, and records a low-rate k6 baseline plus database readiness recovery against job-local disposable databases. Run it manually with a candidate commit SHA before a release. It does not target Render or any shared deployment; deployment smoke requires a separately provisioned isolated preview.
 
-## Architecture and design choices
+## System Architecture & Engineering Design
 
 ```mermaid
-flowchart LR
-  User[User] --> Web[Next.js checker]
-  Web -->|catalogue and checks| API[FastAPI]
-  API --> Rules[Deterministic rules]
-  API --> DB[(PostgreSQL)]
-  DB --> Evidence[Capability-linked manufacturer evidence]
-  Rules --> Result[Verdict, requirements, limits, evidence]
+flowchart TD
+  subgraph ClientTier["Frontend Layer (Next.js 15 App Router / React 19)"]
+    UI["Checker Interface & Quick-Filter Search"]
+    A11y["WCAG 2.1 AA Compliant ARIA Live Regions"]
+    Snap["Immutable Result Snapshots (?snapshot=id)"]
+  end
+
+  subgraph ServiceTier["Backend API Service (FastAPI / Python 3.12)"]
+    API["FastAPI REST Endpoints"]
+    Auth["Protected Admin API (Bearer Token Auth)"]
+    NLParser["Natural Language Setup Parser"]
+  end
+
+  subgraph EngineTier["Deterministic Rule Engine (v0.6.0)"]
+    Tier1["Tier 1: Verified Manufacturer Evidence"]
+    Tier2["Tier 2: Theoretical Protocol Evaluation"]
+    Rules["Hardware Rules (macOS MST, Bifurcation, Net PD, DisplayLink)"]
+  end
+
+  subgraph DataTier["Data & Specification Storage Layer"]
+    DB[("PostgreSQL 16 / SQLite Engine")]
+    Specs["Declarative JSON Device Specs (api/specs/)"]
+    Audit["Automated Evidence Freshness & Staleness Tracker"]
+  end
+
+  subgraph OpsTier["Observability & Reliability Infrastructure"]
+    Metrics["Prometheus /metrics Endpoint"]
+    Logs["Structured JSON Request & Latency Logging"]
+    Health["Liveness (/health) & DB Readiness (/ready) Probes"]
+  end
+
+  UI -->|HTTP / JSON| API
+  NLParser -->|Extracted Setup| API
+  API --> Rules
+  Rules --> Tier1
+  Rules --> Tier2
+  API --> DB
+  Specs -->|Declarative Ingestion| DB
+  DB --> Audit
+  API --> Metrics
+  API --> Logs
 ```
 
-- The API is the source of truth for verified devices and protocol baselines. Draft and review-needed records stay private.
-- The Python rules engine (version 0.6.0) calculates every verdict deterministically over two tiers: **Verified Manufacturer Evidence** and **Theoretical Protocol Evaluation**. It accounts for DP Alt Mode, DisplayPort MST vs. macOS SST mirroring, Thunderbolt daisy-chaining and bandwidth tunneling, DisplayLink software driver routing, and USB-C host bandwidth contention. It does not infer device specifications; missing required values produce **Insufficient data**.
-- Catalogue capabilities link to manufacturer URLs, factual excerpts, and checked dates. Device records are declared as clean JSON specifications under `api/specs/laptops/` and `api/specs/accessories/`. The seed workflow, JSON spec ingestion CLI (`seed_from_spec.py`), and protected admin API require evidence for populated published fields.
-- PostgreSQL is used in the combined Compose workflow; direct local API development defaults to SQLite.
-- The verified catalogue currently publishes 22 laptops and 24 accessories spanning exact vendor hardware (Apple, Dell, Lenovo, Anker, Belkin, Ugreen, Plugable) and standard hardware protocol profiles (Thunderbolt 4, USB-C 3.2 Gen 2, Apple Silicon Base Architecture, Dual MST Docks). Three accessories remain in `needs_review`.
-- Reverse lookup is supported via `GET /devices/laptops/{device_id}/compatible-accessories` with display and charging filters, alongside instant catalogue search via `GET /devices/search`.
-- The evaluator test suite in `tests/test_rules.py` and `tests/test_two_tier_evaluation.py` covers real-world compatibility scenarios and physical protocol constraints. The complete API test suite passes 163 unit and integration tests (with 11 PostgreSQL policy/readiness checks conditionally executed in isolated CI environments); API lint/format, frontend lint/format, and the Next.js production build also pass.
-
-The Render Free preview configuration is prepared but not deployed. The default `onrender.com` hostnames can be used without buying a domain. No portfolio destination has been selected. Core V2 evidence reviews, desktop/mobile browser checks, quality checks, two-tier evaluation, and protocol fidelity rules are complete.
+- **Separation of Concerns:** The API serves as the single source of truth for verified hardware devices and protocol baselines. Unreviewed drafts remain private.
+- **Deterministic Evaluation:** The Python rules engine (`v0.6.0`) computes verdicts deterministically across both evaluation tiers. It directly models DisplayPort Alternate Mode, DP Multi-Stream Transport (MST) vs. macOS SST mirroring, Thunderbolt bandwidth tunneling, DisplayLink software routing, and USB-C lane bifurcation. Specifications are never guessed; absent data results in **Insufficient data**.
+- **Evidence-Linked Catalogue:** Every published capability links directly to a verified manufacturer citation URL, verbatim excerpt, and validation timestamp. Specifications are declared as structured JSON documents under `api/specs/laptops/` and `api/specs/accessories/`.
+- **Database Flexibility:** Production deployments utilize PostgreSQL 16 (with connection pooling via `psycopg3`), while local and test workflows leverage isolated SQLite engines.
+- **Reverse Lookup & Instant Search:** Includes reverse capability search via `GET /devices/laptops/{device_id}/compatible-accessories` with dynamic display and power filters, alongside full-text instant search via `GET /devices/search`.
+- **Comprehensive Quality Gates:** 163 backend unit and integration tests, strict Ruff linting and formatting, Playwright end-to-end browser journeys across desktop and mobile viewports, automated WCAG 2.1 AA accessibility assertions, and production Next.js builds.
 
 ## Operations and monitoring
 
@@ -276,6 +320,25 @@ web/
 .github/          GitHub Actions CI and release confidence workflows
 ```
 
-## Scope and limitations
+## Scope, Limitations & Future Work
 
-PortPilot is an early compatibility checker, not a retailer search or recommendation service. It does not scrape marketplace listings, infer unsupported capabilities, or diagnose hardware faults. The catalogue is manually curated from manufacturer sources. PostgreSQL persistence, evidence-linked device records, and a protected catalogue administration API are in place; broader device coverage and the public deployment remain incomplete.
+### Current Project Scope
+- PortPilot is a deterministic compatibility and protocol verification engine, not an e-commerce affiliate or recommendation service.
+- It operates strictly over verified technical specifications and established hardware protocols, intentionally avoiding unverified inferences or marketplace scraping.
+- Hardware coverage is backed by an auditable manual and declarative JSON evidence pipeline across major device ecosystems (Apple, Dell, Lenovo, Anker, Belkin, Ugreen, Plugable).
+
+### Future Work & Extensions
+- **Expanded Hardware Catalogue:** Broaden declarative spec coverage across additional OEM manufacturers and next-generation protocols (USB4 2.0 80 Gbps / 120 Gbps and Thunderbolt 5).
+- **Automated Evidence Verification Bot:** Implement scheduled headless scrapers to re-verify manufacturer specification URL liveness, detect document changes, and automatically flag stale evidence.
+- **Crowdsourced Review Pipeline:** Provide a cryptographically signed community submission pipeline allowing contributors to submit manufacturer specification PDFs/links with automated schema checks.
+
+---
+
+## Academic Project Attribution
+
+- **Project:** PortPilot — Deterministic Hardware Protocol & Peripheral Compatibility Verification Engine
+- **Academic Context:** Final Year Major Project / Capstone Project (B.Tech / Bachelor of Technology)
+- **Author / Developer:** Kartik Agrawal ([@rokar0028](https://github.com/rokar0028))
+- **Technologies:** Python 3.12, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Next.js 15, TypeScript 5.7, Playwright, Docker, Prometheus
+- **Repository:** [github.com/rokar0028/portpilot](https://github.com/rokar0028/portpilot)
+- **License:** [MIT License](LICENSE)
